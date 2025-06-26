@@ -1,29 +1,26 @@
 ```markdown
-# Report
+# File
+transformed_iot_data.csv
 
-**File**: transformed_iot_data.csv
-
-**Schema**:
+# Schema
 - sensor_id: TEXT
 - timestamp: TEXT
 - value: REAL
-- location: TEXT
-- device_type: TEXT
+- location: TEXT- device_type: TEXT
 - year: INTEGER
 - hour: INTEGER
 
-**Shape**:
+# Shape
 - Rows: 20
 - Columns: 7
 
-**Missing Values**:
+# Missing Values
 No missing values found.
 
-**Anomalies**:
+# Anomalies
 No anomalies detected.
 
-**Feature Engineering**:
-- Extract the day of the week from the timestamp.
-- Create a combined location and device_type feature.
-- Investigate value distribution for each device_type.
+# Feature Engineering
+- Consider extracting the day of the week or month from the timestamp for time-based analysis.
+- You could create a combined location and device_type feature for more specific groupings.
 ```

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
-import Home from '../src/Pages/home'; // Fix path and ensure case matches
+import Home from './Pages/home'; // Ensure path matches your project structure
+import Chat from './Pages/chat'; // Import the Chat component
 
 function App() {
   return (
@@ -11,7 +12,7 @@ function App() {
             <Link to="/" className="text-2xl font-bold">DataEng-Automata</Link>
             <div className="space-x-4">
               <Link to="/" className="hover:underline">Home</Link>
-              {/* Add more nav links later, e.g., Datasets, Logs, etc. */}
+              <Link to="/chat" className="hover:underline">Chat</Link>
             </div>
           </div>
         </nav>
@@ -20,7 +21,7 @@ function App() {
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
-            {/* Add more routes here as needed */}
+            <Route path="/chat" element={<Chat />} />
           </Routes>
         </main>
 
