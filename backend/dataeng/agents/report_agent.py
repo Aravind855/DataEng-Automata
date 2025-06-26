@@ -83,19 +83,19 @@ def run_report_agent(filename: str) -> str:
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", """
-You are an expert data analyst. Your task is to analyze the provided CSV data and generate a structured Markdown report.
-The report must include the following sections:
-- **File**: The name of the file.
-- **Schema**: A summary of column names and their data types.
-- **Shape**: The number of rows and columns.
-- **Missing Values**: A list of columns with missing values and their counts, or a note if none.
-- **Anomalies**: Detected issues such as negative values in numeric columns or duplicate rows.
-- **Feature Engineering**: Suggestions for derived features (e.g., age from date_of_birth).
+            You are an expert data analyst. Your task is to analyze the provided CSV data and generate a structured Markdown report.
+            The report must include the following sections:
+            - **File**: The name of the file.
+            - **Schema**: A summary of column names and their data types.
+            - **Shape**: The number of rows and columns.
+            - **Missing Values**: A list of columns with missing values and their counts, or a note if none.
+            - **Anomalies**: Detected issues such as negative values in numeric columns or duplicate rows.
+            - **Feature Engineering**: Suggestions for derived features (e.g., age from date_of_birth).
 
-Use the `generate_report` tool to process the CSV data. Return the report as a well-formatted Markdown string. If the data is empty or invalid, return an error message in Markdown format (e.g., '# Error\nInvalid or empty dataset').
-            """),
-            ("human", "Generate a markdown report for:\nFilename: {filename}\nCSV Data:\n{csv_data}\n{agent_scratchpad}")
-        ])
+            Use the `generate_report` tool to process the CSV data. Return the report as a well-formatted Markdown string. If the data is empty or invalid, return an error message in Markdown format (e.g., '# Error\nInvalid or empty dataset').
+                        """),
+                        ("human", "Generate a markdown report for:\nFilename: {filename}\nCSV Data:\n{csv_data}\n{agent_scratchpad}")
+                    ])
 
         agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
         executor = AgentExecutor(
