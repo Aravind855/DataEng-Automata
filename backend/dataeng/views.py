@@ -1,3 +1,4 @@
+# views.py
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.conf import settings
@@ -12,6 +13,7 @@ from .agents.data_ingestion import ingest_file
 from .agents.transformation_agent import transform_file
 from .agents.report_agent import run_report_agent
 from .agents.rag_agent import run_rag_agent
+from .agents.query_agent import process_query  # Add import for query agent
 
 # Configure logging to capture messages
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -53,20 +55,16 @@ def transformation_tool(filename: str, category: str) -> dict:
 class RAGToolInput(BaseModel):
     filename: str = Field(description="Name of the CSV file to process")
     csv_data: str = Field(description="Raw CSV data as a string", default="")
-    query: str = Field(description="User query to process", default="")
 
 @tool(args_schema=RAGToolInput)
-def rag_tool(filename: str, csv_data: str = "", query: str = "") -> dict:
-    """Creates embeddings or processes a query using the RAG agent."""
-    logger.debug(f"rag_tool called with filename={filename}, has_csv={bool(csv_data)}, query={query}")
+def rag_tool(filename: str, csv_data: str = "") -> dict:
+    """Creates embeddings using the RAG agent."""
+    logger.debug(f"rag_tool called with filename={filename}, has_csv={bool(csv_data)}")
     try:
-        result = run_rag_agent(filename, csv_data, query)
+        result = run_rag_agent(filename, csv_data)
         if result.startswith("Error:"):
             raise ValueError(result)
-        if csv_data:
-            return {"vector_db_path": result}
-        else:
-            return {"response": result}
+        return {"vector_db_path": result}
     except Exception as e:
         logger.error(f"RAG error: {str(e)}")
         return {"error": str(e)}
@@ -142,21 +140,6 @@ def upload_and_analyze(request):
                 logs.append(f"Error: Transformed file {clean_path} has invalid CSV format")
                 return JsonResponse({'error': f'Transformed file {clean_path} has invalid CSV format', 'logs': logs}, status=500)
 
-            logger.info("Starting RAG embedding creation")
-            logs.append("Starting RAG embedding creation")
-            rag_result = rag_tool.invoke({"filename": os.path.basename(clean_path), "csv_data": csv_data})
-            logger.debug(f"RAG embedding result: {rag_result}")
-            logs.append(f"RAG embedding result: {rag_result}")
-            if "error" in rag_result:
-                logs.append(f"RAG embedding error: {rag_result['error']}")
-                return JsonResponse({'error': rag_result["error"], 'logs': logs}, status=500)
-
-            vector_db_path = rag_result.get("vector_db_path")
-            if not vector_db_path or not os.path.exists(vector_db_path):
-                logger.error(f"Vector DB not found at {vector_db_path}")
-                logs.append(f"Error: Vector DB not found at {vector_db_path}")
-                return JsonResponse({'error': f'Vector DB not found at {vector_db_path}', 'logs': logs}, status=500)
-
             logger.info("Starting report generation")
             logs.append("Starting report generation")
             try:
@@ -172,8 +155,23 @@ def upload_and_analyze(request):
                 logs.append(f"Report generation error: {str(e)}")
                 return JsonResponse({'error': f'Report generation failed: {str(e)}', 'logs': logs}, status=500)
 
+            logger.info("Starting RAG embedding creation")
+            logs.append("Starting RAG embedding creation")
+            rag_result = rag_tool.invoke({"filename": os.path.basename(clean_path), "csv_data": csv_data})
+            logger.debug(f"RAG embedding result: {rag_result}")
+            logs.append(f"RAG embedding result: {rag_result}")
+            if "error" in rag_result:
+                logs.append(f"RAG embedding error: {rag_result['error']}")
+                return JsonResponse({'error': rag_result["error"], 'logs': logs}, status=500)
+
+            vector_db_path = rag_result.get("vector_db_path")
+            if not vector_db_path or not os.path.exists(vector_db_path):
+                logger.error(f"Vector DB not found at {vector_db_path}")
+                logs.append(f"Error: Vector DB not found at {vector_db_path}")
+                return JsonResponse({'error': f'Vector DB not found at {vector_db_path}', 'logs': logs}, status=500)
+
             return JsonResponse({
-                'message': 'Upload + Ingestion + Transformation + RAG Embedding + Report Complete',
+                'message': 'Upload + Ingestion + Transformation + Report + RAG Embedding Complete',
                 'category': category,
                 'valid': valid,
                 'transformation_result': clean_path,
@@ -196,6 +194,8 @@ def query_rag(request):
         filename = request.POST.get('filename')
         logs = []
 
+        logger.debug(f"Received query: '{query}', filename: '{filename}'")
+
         if not query or not filename:
             logger.error("Missing query or filename in RAG query request")
             logs.append("Error: Missing query or filename")
@@ -204,22 +204,22 @@ def query_rag(request):
         try:
             logger.info(f"Processing RAG query: {query} for {filename}")
             logs.append(f"Processing RAG query: {query} for {filename}")
-            rag_result = rag_tool.invoke({"filename": filename, "query": query})
-            logger.debug(f"RAG query result: {rag_result}")
-            logs.append(f"RAG query result: {rag_result}")
+            response = process_query(query, filename)
+            logger.debug(f"Query response: {response}")
+            logs.append(f"Query response: {response}")
 
-            if "error" in rag_result:
-                logs.append(f"RAG query error: {rag_result['error']}")
-                return JsonResponse({'error': rag_result["error"], 'logs': logs}, status=500)
+            if response.startswith("Error:"):
+                logs.append(f"Query error: {response}")
+                return JsonResponse({'error': response, 'logs': logs}, status=500)
 
             return JsonResponse({
                 'message': 'Query processed successfully',
-                'response': rag_result['response'],
+                'response': response,
                 'logs': logs
             })
         except Exception as e:
-            logger.error(f"RAG query error: {str(e)}")
-            logs.append(f"RAG query error: {str(e)}")
+            logger.error(f"Query error: {str(e)}")
+            logs.append(f"Query error: {str(e)}")
             return JsonResponse({'error': str(e), 'logs': logs}, status=500)
 
     return JsonResponse({'error': 'Invalid request method', 'logs': []}, status=400)

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaUpload, FaCheckCircle, FaSpinner, FaFileCsv, FaChartBar } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaSpinner, FaFileCsv, FaChartBar, FaComments } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
 
 function Home() {
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('');
   const [aiAnalysis, setAiAnalysis] = useState('');
@@ -19,6 +21,13 @@ function Home() {
   });
   const [reportPath, setReportPath] = useState('');
   const [logs, setLogs] = useState([]);
+  const [transformedFilename, setTransformedFilename] = useState('');
+
+  useEffect(() => {
+    if (!navigate) {
+      console.error('useNavigate is not available. Ensure Home is rendered within a Router.');
+    }
+  }, [navigate]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -43,11 +52,13 @@ function Home() {
     setAgentStatus({ ingestion: 'pending', transformation: 'pending', report: 'pending' });
     setReportPath('');
     setLogs([]);
+    setTransformedFilename('');
   };
 
   const handleUpload = async () => {
     if (!file) {
       setError('Please select a file');
+      toast.error('Please select a file');
       return;
     }
 
@@ -66,9 +77,8 @@ function Home() {
 
       console.log('✅ Backend response:', response.data);
 
-      const { message, category, valid, transformation_result, report_path, logs: backendLogs } = response.data;
+      const { message, category, valid, transformation_result, transformed_filename, report_path, logs: backendLogs } = response.data;
 
-      // Update logs with backend logs
       setLogs(backendLogs.map(log => ({
         text: log,
         timestamp: new Date().toISOString(),
@@ -80,6 +90,7 @@ function Home() {
       if (transformation_result) {
         setProgress(66);
         setAgentStatus({ ...agentStatus, transformation: 'completed' });
+        setTransformedFilename(transformed_filename || transformation_result.split(/[\\/]/).pop()); // Handle both \ and /
       }
 
       if (report_path) {
@@ -93,8 +104,9 @@ function Home() {
       toast.success('Process completed successfully!');
     } catch (err) {
       console.error('❌ Upload failed:', err);
-      setError(err.response?.data?.error || err.message || 'Upload failed');
-      toast.error(err.response?.data?.error || 'An error occurred');
+      const errorMsg = err.response?.data?.error || err.message || 'Upload failed';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setAgentStatus({
         ingestion: err.response?.data?.error ? 'failed' : agentStatus.ingestion,
         transformation: 'pending',
@@ -103,7 +115,7 @@ function Home() {
       setLogs(err.response?.data?.logs?.map(log => ({
         text: log,
         timestamp: new Date().toISOString(),
-      })) || [{ text: err.message, timestamp: new Date().toISOString() }]);
+      })) || [{ text: errorMsg, timestamp: new Date().toISOString() }]);
     } finally {
       setLoading(false);
     }
@@ -113,6 +125,14 @@ function Home() {
     if (reportPath) {
       window.open(`http://localhost:8000${reportPath}`, '_blank');
       toast.info('Downloading report...');
+    }
+  };
+
+  const goToChat = () => {
+    if (transformedFilename) {
+      navigate(`/chat?filename=${encodeURIComponent(transformedFilename)}`);
+    } else {
+      toast.error('No transformed file available to query');
     }
   };
 
@@ -179,7 +199,6 @@ function Home() {
             {loading ? 'Processing...' : 'Upload & Analyze'}
           </button>
 
-          {/* Progress Bar */}
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
@@ -188,7 +207,6 @@ function Home() {
           </div>
           <p className="text-sm text-gray-600 text-center">Progress: {progress}%</p>
 
-          {/* Agent Status */}
           <div className="space-y-4">
             {Object.entries(agentStatus).map(([agent, status]) => (
               <motion.div
@@ -205,7 +223,6 @@ function Home() {
             ))}
           </div>
 
-          {/* Logs Panel */}
           <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-60 overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Execution Logs</h3>
             <AnimatePresence>
@@ -224,7 +241,6 @@ function Home() {
             </AnimatePresence>
           </div>
 
-          {/* Results */}
           {uploadStatus && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -246,14 +262,24 @@ function Home() {
             </motion.div>
           )}
 
-          {reportPath && (
-            <button
-              onClick={downloadReport}
-              className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 flex items-center justify-center mt-4 transition-all duration-300"
-            >
-              <FaFileCsv className="mr-2" /> Download Report
-            </button>
-          )}
+          <div className="flex space-x-4">
+            {reportPath && (
+              <button
+                onClick={downloadReport}
+                className="flex-1 bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 flex items-center justify-center mt-4 transition-all duration-300"
+              >
+                <FaFileCsv className="mr-2" /> Download Report
+              </button>
+            )}
+            {uploadStatus && (
+              <button
+                onClick={goToChat}
+                className="flex-1 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 flex items-center justify-center mt-4 transition-all duration-300"
+              >
+                <FaComments className="mr-2" /> Go to Chat
+              </button>
+            )}
+          </div>
 
           {error && (
             <motion.div

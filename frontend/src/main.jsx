@@ -1,10 +1,11 @@
+// main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Home from '../src/Pages/home'; // or './App' if you're using App instead
-import './index.css'; // or your styles file
+import App from './App'; // Correct: App wraps all routes
+import './index.css'; // Optional: your global styles
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Home />
+    <App /> {/* ✅ Render App, not Home */}
   </React.StrictMode>
 );

@@ -1,3 +1,4 @@
+# rag_agent.py
 import os
 import pandas as pd
 import logging
@@ -73,96 +74,32 @@ def create_embeddings(filename: str, csv_data: str) -> str:
         logger.error(f"Error creating embeddings for {filename}: {str(e)}")
         return f"Error: {str(e)}"
 
-class QueryRAGInput(BaseModel):
-    query: str = Field(description="User query to process")
-    filename: str = Field(description="Name of the CSV file associated with the vector database")
-
-@tool(args_schema=QueryRAGInput)
-def query_rag(query: str, filename: str) -> str:
+def run_rag_agent(filename: str, csv_data: str) -> str:
     """
-    Queries the FAISS vector database with the user query and generates a response using the LLM.
-    Returns the response as a string.
+    Runs the RAG agent to create embeddings from CSV data.
+    Returns the vector DB path.
     """
-    logger.debug(f"Processing query '{query}' for {filename}")
-    try:
-        # Load FAISS index and metadata
-        vector_db_path = os.path.join(VECTOR_DB_DIR, f"{os.path.splitext(filename)[0]}_index.faiss")
-        metadata_path = os.path.join(VECTOR_DB_DIR, f"{os.path.splitext(filename)[0]}_metadata.pkl")
-        if not os.path.exists(vector_db_path) or not os.path.exists(metadata_path):
-            logger.error(f"Vector DB or metadata not found for {filename}")
-            return f"Error: Vector DB not found for {filename}"
-
-        index = faiss.read_index(vector_db_path)
-        with open(metadata_path, 'rb') as f:
-            metadata = pickle.load(f)
-        texts = metadata['texts']
-
-        # Encode query
-        query_embedding = embedder.encode([query], show_progress_bar=False)
-        query_embedding = np.array(query_embedding, dtype='float32')
-
-        # Search FAISS index
-        k = 5  # Number of nearest neighbors
-        distances, indices = index.search(query_embedding, k)
-        retrieved_texts = [texts[i] for i in indices[0]]
-        context = "\n".join(retrieved_texts)
-        logger.debug(f"Retrieved context (first 1000 chars): {context[:1000]}")
-
-        # Generate response using LLM
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
-            temperature=0.7,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
-        )
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", """
-            You are a helpful chatbot that answers user queries based on provided data context.
-            Use the following context to answer the query concisely and accurately:
-            {context}
-            If the context is insufficient, say so and provide a general answer if possible.
-            Return the answer as plain text, no markdown or extra formatting.
-            """),
-            ("human", "Query: {query}")
-        ])
-        chain = prompt | llm
-        response = chain.invoke({"query": query, "context": context})
-        return response.content
-    except Exception as e:
-        logger.error(f"Error processing query for {filename}: {str(e)}")
-        return f"Error: {str(e)}"
-
-def run_rag_agent(filename: str, csv_data: str = None, query: str = None) -> str:
-    """
-    Runs the RAG agent to either create embeddings or process a query.
-    If csv_data is provided, creates embeddings. If query is provided, processes the query.
-    Returns the vector DB path or query response.
-    """
-    logger.info(f"Running RAG agent for {filename}, query: {query}, has_csv: {csv_data is not None}")
+    logger.info(f"Running RAG agent for {filename}, has_csv: {bool(csv_data)}")
     try:
         # Input validation
-        if csv_data and query:
-            logger.error("Cannot process both CSV data and query simultaneously")
-            return "Error: Cannot process both CSV data and query simultaneously"
-        if not csv_data and not query:
-            logger.error("Must provide either CSV data or a query")
-            return "Error: Must provide either CSV data or a query"
+        if not csv_data:
+            logger.error("No CSV data provided")
+            return "Error: No CSV data provided"
 
         llm = ChatGoogleGenerativeAI(
             model="gemini-1.5-flash",
             temperature=0.0,
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
-        tools = [create_embeddings, query_rag]
+        tools = [create_embeddings]
         prompt = ChatPromptTemplate.from_messages([
             ("system", """
-            You are a RAG agent that processes CSV data to create embeddings or answers queries using a vector database.
-            - If CSV data is provided (non-empty), use the create_embeddings tool to generate and store embeddings, returning the vector DB path.
-            - If a query is provided (non-empty), use the query_rag tool to retrieve relevant data and generate a response, returning the response.
-            - Do not process both CSV data and a query together.
-            - Return the result as a plain string (either the vector DB path or the query response).
+            You are a RAG agent that processes CSV data to create embeddings.
+            - Use the create_embeddings tool to generate and store embeddings, returning the vector DB path.
+            - Return the result as a plain string (the vector DB path).
             - If the input is invalid, return an error message starting with 'Error: '.
             """),
-            ("human", "Filename: {filename}\nCSV Data: {csv_data}\nQuery: {query}\n{agent_scratchpad}")
+            ("human", "Filename: {filename}\nCSV Data: {csv_data}\n{agent_scratchpad}")
         ])
         agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
         executor = AgentExecutor(
@@ -173,39 +110,17 @@ def run_rag_agent(filename: str, csv_data: str = None, query: str = None) -> str
             max_iterations=3
         )
 
-        # Normalize inputs to ensure empty strings are handled correctly
-        csv_data = csv_data.strip() if csv_data else ""
-        query = query.strip() if query else ""
-
-        if csv_data:
-            result = executor.invoke({
-                "filename": filename,
-                "csv_data": csv_data,
-                "query": "",
-                "agent_scratchpad": ""
-            })
-            output = result["output"]
-            if output.startswith("Error:"):
-                logger.error(f"RAG agent failed to create embeddings: {output}")
-                return output
-            logger.info(f"RAG agent created embeddings: {output}")
+        result = executor.invoke({
+            "filename": filename,
+            "csv_data": csv_data,
+            "agent_scratchpad": ""
+        })
+        output = result["output"]
+        if output.startswith("Error:"):
+            logger.error(f"RAG agent failed: {output}")
             return output
-        elif query:
-            result = executor.invoke({
-                "filename": filename,
-                "csv_data": "",
-                "query": query,
-                "agent_scratchpad": ""
-            })
-            output = result["output"]
-            if output.startswith("Error:"):
-                logger.error(f"RAG agent failed to process query: {output}")
-                return output
-            logger.info(f"RAG agent query response: {output}")
-            return output
-        else:
-            logger.error("Unexpected input state after validation")
-            return "Error: Invalid input state"
+        logger.info(f"RAG agent result: {output}")
+        return output
 
     except Exception as e:
         logger.error(f"RAG agent error for {filename}: {str(e)}")

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { FaPaperPlane, FaSpinner, FaFileCsv } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
+import { useLocation, Link } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
 
 function Chat() {
@@ -12,53 +13,77 @@ function Chat() {
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState([]);
   const [availableFiles, setAvailableFiles] = useState([]);
+  const location = useLocation();
 
   useEffect(() => {
-    // Fetch available transformed files
     const fetchFiles = async () => {
       try {
         const response = await axios.get('http://localhost:8000/api/available_files/');
-        setAvailableFiles(response.data.files || []);
+        const files = response.data.files || [];
+        setAvailableFiles(files);
+
+        const params = new URLSearchParams(location.search);
+        const urlFilename = params.get('filename');
+        console.log('URL Filename:', urlFilename, 'Available Files:', files); // Debug log
+        if (urlFilename && files.includes(urlFilename)) {
+          setFilename(urlFilename);
+        }
       } catch (err) {
         toast.error('Failed to fetch available files');
       }
     };
     fetchFiles();
-  }, []);
+  }, [location.search]);
 
-  const handleQuerySubmit = async () => {
-    if (!query || !filename) {
-      toast.error('Please enter a query and select a file');
-      return;
-    }
+    const handleQuerySubmit = async () => {
+      console.log('Submitting query:', { query, filename });
+      if (!query || !filename) {
+        toast.error('Please enter a query and select a file');
+        return;
+      }
 
-    const newMessage = { text: query, sender: 'user', timestamp: new Date().toISOString() };
-    setMessages([...messages, newMessage]);
-    setLogs([...logs, { text: `User query: ${query}`, timestamp: new Date().toISOString() }]);
-    setLoading(true);
+      const newMessage = { text: query, sender: 'user', timestamp: new Date().toISOString() };
+      setMessages([...messages, newMessage]);
+      setLogs([...logs, { text: `User query: ${query}`, timestamp: new Date().toISOString() }]);
+      setLoading(true);
 
-    try {
-      const response = await axios.post('http://localhost:8000/api/query_rag/', {
-        query,
-        filename,
-      });
+      try {
+        // Create FormData to send data as form-encoded
+        const formData = new FormData();
+        formData.append('query', query);
+        formData.append('filename', filename);
 
-      const { message, response: botResponse, logs: backendLogs } = response.data;
-      setMessages([...messages, newMessage, { text: botResponse, sender: 'bot', timestamp: new Date().toISOString() }]);
-      setLogs([...logs, ...backendLogs.map(log => ({ text: log, timestamp: new Date().toISOString() }))]);
-      toast.success(message);
-    } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Failed to process query';
-      setMessages([...messages, newMessage, { text: errorMsg, sender: 'bot', timestamp: new Date().toISOString() }]);
-      setLogs([...logs, ...err.response?.data?.logs.map(log => ({ text: log, timestamp: new Date().toISOString() })) || [
-        { text: errorMsg, timestamp: new Date().toISOString() }
-      ]]);
-      toast.error(errorMsg);
-    } finally {
-      setLoading(false);
-      setQuery('');
-    }
-  };
+        const response = await axios.post('http://localhost:8000/api/query_rag/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        const { message, response: botResponse, logs: backendLogs } = response.data;
+        setMessages([...messages, newMessage, { text: botResponse, sender: 'bot', timestamp: new Date().toISOString() }]);
+        setLogs([...logs, ...backendLogs.map(log => ({ text: log, timestamp: new Date().toISOString() }))]);
+        toast.success(message);
+      } catch (err) {
+        const errorMsg = err.response?.data?.error || 'Failed to process query';
+        setMessages([
+          ...messages,
+          newMessage,
+          { text: errorMsg, sender: 'bot', timestamp: new Date().toISOString() }
+        ]);
+        setLogs([
+          ...logs,
+          ...(
+            err.response?.data?.logs?.map(log => ({
+              text: log,
+              timestamp: new Date().toISOString()
+            })) || [{ text: errorMsg, timestamp: new Date().toISOString() }]
+          )
+        ]);
+        toast.error(errorMsg);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -78,9 +103,10 @@ function Chat() {
         <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center">
           <FaFileCsv className="mr-2" /> DataEng-Automata Chatbot
         </h1>
-
+        <Link to="/" className="text-blue-600 hover:underline mb-4 inline-block">
+          ← Back to Home
+        </Link>
         <div className="flex-grow flex flex-col space-y-4">
-          {/* File Selection */}
           <div className="flex items-center space-x-4">
             <label className="text-gray-700 font-semibold">Select Dataset:</label>
             <select
@@ -94,8 +120,6 @@ function Chat() {
               ))}
             </select>
           </div>
-
-          {/* Chat Area */}
           <div className="flex-grow bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-96 overflow-y-auto">
             <AnimatePresence>
               {messages.map((msg, index) => (
@@ -118,8 +142,6 @@ function Chat() {
               ))}
             </AnimatePresence>
           </div>
-
-          {/* Query Input */}
           <div className="flex items-center space-x-2">
             <textarea
               value={query}
@@ -137,24 +159,6 @@ function Chat() {
             </button>
           </div>
 
-          {/* Logs Panel */}
-          <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-60 overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Execution Logs</h3>
-            <AnimatePresence>
-              {logs.map((log, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-sm text-gray-700 mb-1"
-                >
-                  <span className="text-xs text-gray-500 mr-2">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                  {log.text}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
         </div>
       </motion.div>
     </div>
