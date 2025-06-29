@@ -4,18 +4,26 @@ import logging
 import io
 from langchain.agents import AgentExecutor, create_openai_functions_agent
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_community.llms import Ollama
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic.v1 import BaseModel, Field
 import time
-from sklearn.preprocessing import LabelEncoder
 
-logging.basicConfig(level=logging.INFO)
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Directory paths
 ORG_DIR = os.path.abspath("organized_data")
 CLEAN_DIR = os.path.abspath("transformed_datas")
 os.makedirs(CLEAN_DIR, exist_ok=True)
+
+# Schema constraints for different categories
+SCHEMA_CONSTRAINTS = {
+    'sales': ['customer_name', 'revenue', 'invoice_id', 'product', 'date', 'year', 'month'],
+    'hr': ['employee_id', 'name', 'salary', 'designation', 'joining_date', 'years_of_service', 'month'],
+    'iot': ['sensor_id', 'timestamp', 'value', 'location', 'device_type', 'year', 'hour']
+}
 
 class AnalyzeAndTransformInput(BaseModel):
     filename: str = Field(description="The name of the file being transformed")
@@ -26,59 +34,106 @@ class AnalyzeAndTransformInput(BaseModel):
 def analyze_and_transform(filename: str, category: str, csv_data: str) -> str:
     """
     Transforms the raw CSV data into a cleaned dataset with added features.
-    Returns the transformed CSV string with exactly 7 columns: sensor_id, timestamp, value, location, device_type, year, hour.
+    Returns the transformed CSV string with exactly 7 columns based on the category.
     """
-    logger.debug(f"Input CSV data for {filename}:\n{csv_data[:1000]}")
+    logger.debug(f"Processing transformation for {filename} in category {category}")
     try:
+        # Read CSV data
         df = pd.read_csv(io.StringIO(csv_data))
+        if df.empty:
+            logger.error(f"Empty dataset for {filename}")
+            return f"Error: Empty dataset for {filename}"
 
-        # 1. Handle Missing Values:
+        expected_cols = SCHEMA_CONSTRAINTS.get(category, SCHEMA_CONSTRAINTS['sales'])
+        
+        # 1. Handle Missing Values
         for col in df.columns:
             if df[col].isnull().any():
                 if pd.api.types.is_numeric_dtype(df[col]):
                     df[col] = df[col].fillna(df[col].mean())
                 else:
                     df[col] = df[col].fillna("Unknown")
+        
+        # 2. Convert Data Types
+        if category == 'sales':
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'], errors='coerce')
+            if 'revenue' in df.columns:
+                df['revenue'] = pd.to_numeric(df['revenue'], errors='coerce')
+            for col in ['customer_name', 'product']:
+                if col in df.columns:
+                    df[col] = df[col].astype(str)
+        elif category == 'hr':
+            if 'joining_date' in df.columns:
+                df['joining_date'] = pd.to_datetime(df['joining_date'], errors='coerce')
+            if 'salary' in df.columns:
+                df['salary'] = pd.to_numeric(df['salary'], errors='coerce')
+            for col in ['name', 'designation']:
+                if col in df.columns:
+                    df[col] = df[col].astype(str)
+        elif category == 'iot':
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+            if 'value' in df.columns:
+                df['value'] = pd.to_numeric(df['value'], errors='coerce')
+            for col in ['location', 'device_type']:
+                if col in df.columns:
+                    df[col] = df[col].astype(str)
 
-        # 2. Convert Data Types:
-        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-        df['value'] = pd.to_numeric(df['value'], errors='coerce')
-        for col in ['location', 'device_type']:
-            if col in df.columns:
-                df[col] = df[col].astype(str)
-
-        # 3. Feature Engineering:
-        df['year'] = df['timestamp'].dt.year
-        df['hour'] = df['timestamp'].dt.hour
+        # 3. Feature Engineering
+        if category == 'sales':
+            if 'date' in df.columns:
+                df['year'] = df['date'].dt.year
+                df['month'] = df['date'].dt.month
+        elif category == 'hr':
+            if 'joining_date' in df.columns:
+                df['years_of_service'] = (pd.to_datetime('now') - df['joining_date']).dt.days // 365
+                df['month'] = df['joining_date'].dt.month
+        elif category == 'iot':
+            if 'timestamp' in df.columns:
+                df['year'] = df['timestamp'].dt.year
+                df['hour'] = df['timestamp'].dt.hour
 
         # 4. Remove duplicate rows
         df.drop_duplicates(inplace=True)
 
-        # Ensure correct column order and selection and rename
-        expected_cols = ['sensor_id', 'timestamp', 'value', 'location', 'device_type', 'year', 'hour']
+        # 5. Validate and select expected columns
+        if not all(col in df.columns for col in expected_cols):
+            missing_cols = [col for col in expected_cols if col not in df.columns]
+            logger.error(f"Missing required columns in {filename}: {missing_cols}")
+            return f"Error: Missing required columns: {missing_cols}"
+
         df = df[expected_cols]
 
-        # Convert the transformed data back to CSV format
+        # 6. Convert to CSV
         csv_output = df.to_csv(index=False, encoding='utf-8', lineterminator='\n')
-        logger.debug(f"Transformed CSV Data:\n{csv_output[:1000]}")
+        logger.debug(f"Transformed CSV data (first 1000 chars):\n{csv_output[:1000]}")
 
-        # Verify each row has exactly 7 columns
+        # 7. Validate row column counts
         csv_lines = csv_output.strip().split('\n')
         header = csv_lines[0].split(',')
+        if len(header) != 7:
+            logger.error(f"Header has {len(header)} columns, expected 7: {header}")
+            return f"Error: Header has {len(header)} columns, expected 7"
+
         for i, line in enumerate(csv_lines[1:], start=1):
             fields = line.split(',')
             if len(fields) != 7:
-                logger.error(f"Line {i + 1} has {len(fields)} fields, expected 7. Line content: {line}")
-                raise ValueError(f"Data integrity issue: Line {i + 1} has {len(fields)} columns, expected 7")
+                logger.error(f"Line {i + 1} has {len(fields)} fields, expected 7: {line}")
+                return f"Error: Line {i + 1} has {len(fields)} columns, expected 7"
 
         return csv_output
 
     except Exception as e:
-        logger.error(f"Error during data transformation: {str(e)}")
+        logger.error(f"Error during transformation for {filename}: {str(e)}")
         return f"Error: {str(e)}"
 
-def transform_file(filename: str, category: str):
-    logger.info(f"🔁 Transforming: {filename} in category {category}")
+def transform_file(filename: str, category: str) -> str:
+    """
+    Orchestrates the transformation of a file from the organized_data folder.
+    Saves the transformed data to a .txt file and returns the path or None if transformation fails.
+    """
+    logger.info(f"🔁 Starting transformation for {filename} in category {category}")
     file_path = os.path.join(ORG_DIR, category, filename)
 
     # Load dataset
@@ -88,9 +143,11 @@ def transform_file(filename: str, category: str):
         elif filename.endswith('.json'):
             df = pd.read_json(file_path)
         elif filename.endswith('.xlsx'):
-            df = pd.read_excel(file_path)
+            df = pd.read_excel(file_path, engine='openpyxl')
         else:
-            raise ValueError("Unsupported file type")
+            logger.error(f"Unsupported file type for {filename}")
+            return None
+        logger.debug(f"Raw DataFrame from {file_path}:\n{df.head().to_string()}")
     except Exception as e:
         logger.error(f"Failed to load file {file_path}: {str(e)}")
         return None
@@ -101,84 +158,38 @@ def transform_file(filename: str, category: str):
         logger.error(f"Empty CSV data generated for {file_path}")
         return None
 
-    # Setup Gemini + tools
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.0, google_api_key=os.getenv("GOOGLE_API_KEY"))
-    tools = [analyze_and_transform]
+    # Directly invoke analyze_and_transform to ensure reliable output
+    output = analyze_and_transform.invoke({"filename": filename, "category": category, "csv_data": csv_string})
+    logger.debug(f"Tool output for {filename}:\n{output[:1000]}")
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", """
-You are an AI-powered data transformation expert. Your task is to transform the provided raw CSV data into a cleaned and enhanced dataset in a single pass. Follow these steps strictly:
-1. Handle Missing Values: Fill numeric columns with the mean, categorical columns with "Unknown".
-2. Convert Data Types: Ensure 'timestamp' is in datetime format, 'value' is numeric, and 'device_type' and 'location' are strings.
-3. Feature Engineering: Add a 'year' column from 'timestamp' and an 'hour' column.
-4. Remove duplicate rows.
-5. Ensure your data only include the following columns sensor_id,timestamp,value,location,device_type,year,hour,
-6. Return ONLY a raw CSV string with exactly 7 columns: sensor_id,timestamp,value,location,device_type,year,hour.
-Do NOT include any markdown (e.g., ```), code blocks, comments, or extra text.
-Ensure EVERY row has exactly 7 fields, with commas as delimiters.
-If the data is invalid or cannot be transformed, return 'Error: <description of the issue>' as plain text.
-Process all rows completely and avoid truncation. Respond with the CSV string or error message only.
-        """),
-        ("human", "Transform this dataset:\nFilename: {filename}\nCategory: {category}\nRaw CSV Data:\n{csv_data}\n{agent_scratchpad}")
-    ])
-
-    agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True, max_iterations=1)
-
-    # Add timeout to prevent infinite loops
-    start_time = time.time()
-    max_execution_time = 60  # Increased to 60 seconds
-
-    result = agent_executor.invoke({
-        "filename": filename,
-        "category": category,
-        "csv_data": csv_string,
-        "agent_scratchpad": ""
-    })
-
-    if time.time() - start_time > max_execution_time:
-        logger.error(f"Transformation for {filename} exceeded {max_execution_time} seconds, terminating")
-        return None
-
-    # Validate result
-    output = result["output"]
-    logger.debug(f"Full LLM output for {filename}:\n{output}")  # Log full output for debugging
     if output.startswith("Error:"):
         logger.error(f"Transformation failed for {filename}: {output}")
         return None
 
-    # Pre-process and validate CSV, removing non-data lines
+    # Validate and save output as .txt
     try:
-        lines = [line for line in output.strip().split('\n') if line and not line.startswith('```')]
-        if not lines or len(lines) < 2:  # Need header + at least one data row
-            logger.error(f"Transformed data for {filename} has insufficient rows: {len(lines)}")
-            return None
-        header = lines[0].split(',')
-        expected_cols = 7
-        for i, line in enumerate(lines[1:], 1):
-            fields = line.split(',')
-            if len(fields) != expected_cols:
-                logger.error(f"Line {i+1} has {len(fields)} fields, expected {expected_cols}: '{line}'")
-                return None
-
-        df_transformed = pd.read_csv(io.StringIO('\n'.join(lines)))
-        if df_transformed.empty or df_transformed.columns.empty:
-            logger.error(f"Transformed data for {filename} is invalid after parsing")
+        df_transformed = pd.read_csv(io.StringIO(output))
+        expected_cols = SCHEMA_CONSTRAINTS.get(category, SCHEMA_CONSTRAINTS['sales'])
+        if df_transformed.empty or list(df_transformed.columns) != expected_cols:
+            logger.error(f"Invalid transformed data for {filename}: Incorrect columns or empty")
             return None
 
-        clean_filename = f"transformed_{os.path.splitext(filename)[0]}.csv"
+        # Save as .txt file
+        clean_filename = f"transformed_{os.path.splitext(filename)[0]}.txt"
         clean_path = os.path.join(CLEAN_DIR, clean_filename)
+        with open(clean_path, 'w', encoding='utf-8') as f:
+            f.write(output)
+        logger.debug(f"Saved transformed data to {clean_path}:\n{open(clean_path, 'r', encoding='utf-8').read()[:1000]}")
 
-        df_transformed.to_csv(clean_path, index=False, encoding="utf-8", lineterminator='\n')
-        logger.debug(f"Written transformed data to {clean_path}:\n{open(clean_path, 'r', encoding='utf-8').read()[:1000]}")
-
+        # Verify saved file
         saved_df = pd.read_csv(clean_path)
-        if saved_df.empty or saved_df.columns.empty:
+        if saved_df.empty or list(saved_df.columns) != expected_cols:
             logger.error(f"Saved transformed file {clean_path} is invalid")
             return None
-    except Exception as e:
-        logger.error(f"Error writing or validating file: {str(e)}")
-        return None
 
-    logger.info(f"✅ Saved cleaned data: {clean_path}")
-    return clean_path
+        logger.info(f"✅ Successfully transformed and saved: {clean_path}")
+        return clean_path
+
+    except Exception as e:
+        logger.error(f"Error validating or saving transformed data for {filename}: {str(e)}")
+        return None

@@ -1,0 +1,142 @@
+[
+  {
+    "sensor_id": "sensor-001",
+    "timestamp": "2024-05-01T08:00:00Z",
+    "value": 23.5,
+    "location": "Warehouse A",
+    "device_type": "temperature"
+  },
+  {
+    "sensor_id": "sensor-002",
+    "timestamp": "2024-05-01T09:00:00Z",
+    "value": 25.1,
+    "location": "Warehouse B",
+    "device_type": "humidity"
+  },
+  {
+    "sensor_id": "sensor-003",
+    "timestamp": "2024-05-01T10:00:00Z",
+    "value": 22.9,
+    "location": "Warehouse A",
+    "device_type": "temperature"
+  },
+  {
+    "sensor_id": "sensor-004",
+    "timestamp": "2024-05-01T11:00:00Z",
+    "value": 55.2,
+    "location": "Warehouse C",
+    "device_type": "humidity"
+  },
+  {
+    "sensor_id": "sensor-005",
+    "timestamp": "2024-05-01T12:00:00Z",
+    "value": 75.3,
+    "location": "Warehouse A",
+    "device_type": "pressure"
+  },
+  {
+    "sensor_id": "sensor-006",
+    "timestamp": "2024-05-01T13:00:00Z",
+    "value": 24.8,
+    "location": "Warehouse B",
+    "device_type": "temperature"
+  },
+  {
+    "sensor_id": "sensor-007",
+    "timestamp": "2024-05-01T14:00:00Z",
+    "value": 60.4,
+    "location": "Warehouse D",
+    "device_type": "humidity"
+  },
+  {
+    "sensor_id": "sensor-008",
+    "timestamp": "2024-05-01T15:00:00Z",
+    "value": 20.2,
+    "location": "Warehouse C",
+    "device_type": "temperature"
+  },
+  {
+    "sensor_id": "sensor-009",
+    "timestamp": "2024-05-01T16:00:00Z",
+    "value": 76.1,
+    "location": "Warehouse A",
+    "device_type": "pressure"
+  },
+  {
+    "sensor_id": "sensor-010",
+    "timestamp": "2024-05-01T17:00:00Z",
+    "value": 58.3,
+    "location": "Warehouse D",
+    "device_type": "humidity"
+  },
+  {
+    "sensor_id": "sensor-011",
+    "timestamp": "2024-05-01T18:00:00Z",
+    "value": 21.9,
+    "location": "Warehouse A",
+    "device_type": "temperature"
+  },
+  {
+    "sensor_id": "sensor-012",
+    "timestamp": "2024-05-01T19:00:00Z",
+    "value": 54.8,
+    "location": "Warehouse C",
+    "device_type": "humidity"
+  },
+  {
+    "sensor_id": "sensor-013",
+    "timestamp": "2024-05-01T20:00:00Z",
+    "value": 80.0,
+    "location": "Warehouse B",
+    "device_type": "pressure"
+  },
+  {
+    "sensor_id": "sensor-014",
+    "timestamp": "2024-05-01T21:00:00Z",
+    "value": 22.5,
+    "location": "Warehouse A",
+    "device_type": "temperature"
+  },
+  {
+    "sensor_id": "sensor-015",
+    "timestamp": "2024-05-01T22:00:00Z",
+    "value": 56.6,
+    "location": "Warehouse D",
+    "device_type": "humidity"
+  },
+  {
+    "sensor_id": "sensor-016",
+    "timestamp": "2024-05-01T23:00:00Z",
+    "value": 74.2,
+    "location": "Warehouse C",
+    "device_type": "pressure"
+  },
+  {
+    "sensor_id": "sensor-017",
+    "timestamp": "2024-05-02T00:00:00Z",
+    "value": 24.0,
+    "location": "Warehouse A",
+    "device_type": "temperature"
+  },
+  {
+    "sensor_id": "sensor-018",
+    "timestamp": "2024-05-02T01:00:00Z",
+    "value": 61.5,
+    "location": "Warehouse B",
+    "device_type": "humidity"
+  },
+  {
+    "sensor_id": "sensor-019",
+    "timestamp": "2024-05-02T02:00:00Z",
+    "value": 78.9,
+    "location": "Warehouse D",
+    "device_type": "pressure"
+  },
+  {
+    "sensor_id": "sensor-020",
+    "timestamp": "2024-05-02T03:00:00Z",
+    "value": 22.8,
+    "location": "Warehouse A",
+    "device_type": "temperature"
+  }
+]
