@@ -1,82 +1,210 @@
-# views.py
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.conf import settings
 import os
 import pandas as pd
 import logging
-
-from langchain_core.tools import tool
-from pydantic.v1 import BaseModel, Field
-
+from pymongo import MongoClient
 from .agents.data_ingestion import ingest_file
 from .agents.transformation_agent import transform_file
 from .agents.report_agent import run_report_agent
 from .agents.rag_agent import run_rag_agent
-from .agents.query_agent import process_query  # Add import for query agent
+from .agents.query_agent import process_query
+import json
 
-# Configure logging to capture messages
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class DataIngestionToolInput(BaseModel):
-    filepath: str = Field(description="Path to the file to ingest")
-    filename: str = Field(description="Name of the file to ingest")
+def get_mongo_client():
+    """Initialize MongoDB client from environment variable."""
+    mongo_uri = os.getenv("MONGO_URI")
+    if not mongo_uri:
+        logger.error("MONGO_URI not set in environment variables")
+        raise ValueError("MONGO_URI not set")
+    return MongoClient(mongo_uri)
 
-@tool(args_schema=DataIngestionToolInput)
-def data_ingestion_tool(filepath: str, filename: str) -> dict:
-    """Ingests a file, classifies and logs it, returns category and schema validity."""
-    logger.debug(f"data_ingestion_tool called with filepath={filepath}, filename={filename}")
-    try:
-        category, valid = ingest_file(filepath, filename)
-        logger.debug(f"Ingestion completed: category={category}, valid={valid}")
-        return {"category": category, "valid": valid}
-    except Exception as e:
-        logger.error(f"Ingestion error: {str(e)}")
-        return {"error": str(e), "category": "error", "valid": False}
+@csrf_exempt
+def list_databases(request):
+    if request.method == 'GET':
+        try:
+            client = get_mongo_client()
+            databases = client.list_database_names()
+            client.close()
+            system_dbs = ['admin', 'local', 'config']
+            databases = [db for db in databases if db not in system_dbs]
+            logger.info(f"Retrieved database list: {databases}")
+            return JsonResponse({'databases': databases}, status=200)
+        except Exception as e:
+            logger.error(f"Error listing databases: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-class TransformationToolInput(BaseModel):
-    filename: str = Field(description="Name of the file to transform")
-    category: str = Field(description="Category of the file (sales, hr, iot, etc.)")
+@csrf_exempt
+def list_collections(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            db_name = data.get('db_name')
+            if not db_name:
+                logger.error("Missing db_name")
+                return JsonResponse({'error': 'Missing db_name'}, status=400)
 
-@tool(args_schema=TransformationToolInput)
-def transformation_tool(filename: str, category: str) -> dict:
-    """Applies transformation to the ingested file and saves output to clean_data."""
-    logger.debug(f"transform_file called with filename={filename}, category={category}")
-    try:
-        result = transform_file(filename, category)
-        if result is None:
-            raise ValueError("Transformation failed: No output file generated")
-        return {"clean_path": result}
-    except Exception as e:
-        logger.error(f"Transformation error: {str(e)}")
-        return {"error": str(e)}
+            client = get_mongo_client()
+            db = client[db_name]
+            collections = db.list_collection_names()
+            client.close()
+            collections = [col for col in collections if col != 'schemas']
+            logger.info(f"Retrieved collections for {db_name}: {collections}")
+            return JsonResponse({'collections': collections}, status=200)
+        except Exception as e:
+            logger.error(f"Error listing collections for {db_name}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-class RAGToolInput(BaseModel):
-    filename: str = Field(description="Name of the CSV file to process")
-    csv_data: str = Field(description="Raw CSV data as a string", default="")
+@csrf_exempt
+def list_schemas(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            db_name = data.get('db_name')
+            if not db_name:
+                logger.error("Missing db_name")
+                return JsonResponse({'error': 'Missing db_name'}, status=400)
 
-@tool(args_schema=RAGToolInput)
-def rag_tool(filename: str, csv_data: str = "") -> dict:
-    """Creates embeddings using the RAG agent."""
-    logger.debug(f"rag_tool called with filename={filename}, has_csv={bool(csv_data)}")
-    try:
-        result = run_rag_agent(filename, csv_data)
-        if result.startswith("Error:"):
-            raise ValueError(result)
-        return {"vector_db_path": result}
-    except Exception as e:
-        logger.error(f"RAG error: {str(e)}")
-        return {"error": str(e)}
+            client = get_mongo_client()
+            db = client[db_name]
+            schemas_collection = db['schemas']
+            schemas = list(schemas_collection.find({}, {'_id': 0, 'category': 1, 'columns': 1}))
+            client.close()
+            logger.info(f"Retrieved schemas for {db_name}: {schemas}")
+            return JsonResponse({'schemas': schemas}, status=200)
+        except Exception as e:
+            logger.error(f"Error listing schemas for {db_name}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def get_schema(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            db_name = data.get('db_name')
+            category = data.get('category')
+            if not db_name or not category:
+                logger.error("Missing db_name or category")
+                return JsonResponse({'error': 'Missing db_name or category'}, status=400)
+
+            client = get_mongo_client()
+            db = client[db_name]
+            schemas_collection = db['schemas']
+            schema_doc = schemas_collection.find_one({"category": category})
+            client.close()
+            if not schema_doc or "columns" not in schema_doc:
+                logger.info(f"No schema found for {db_name}.{category}")
+                return JsonResponse({'columns': []}, status=200)
+            logger.info(f"Retrieved schema for {db_name}.{category}: {schema_doc['columns']}")
+            return JsonResponse({'columns': schema_doc['columns']}, status=200)
+        except Exception as e:
+            logger.error(f"Error fetching schema for {db_name}.{category}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def save_schema(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            db_name = data.get('db_name')
+            category = data.get('category')
+            columns_raw = data.get('columns', [])
+
+            if not isinstance(columns_raw, list):
+                logger.error("Columns should be a list")
+                return JsonResponse({'error': 'Columns should be a list'}, status=400)
+
+            columns = [col.strip() for col in columns_raw if col.strip()]
+
+            if not db_name or not category or not columns:
+                logger.error("Missing required fields: db_name, category, or columns")
+                return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+            client = get_mongo_client()
+            db = client[db_name]
+            schemas_collection = db['schemas']
+            schemas_collection.update_one(
+                {'category': category},
+                {'$set': {'columns': columns}},
+                upsert=True
+            )
+            client.close()
+
+            logger.info(f"Saved schema for {db_name}.{category}: {columns}")
+            return JsonResponse({'message': 'Schema saved successfully'})
+        except Exception as e:
+            logger.error(f"Error saving schema: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def delete_schema(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            db_name = data.get('db_name')
+            category = data.get('category')
+            if not db_name or not category:
+                logger.error("Missing db_name or category")
+                return JsonResponse({'error': 'Missing db_name or category'}, status=400)
+
+            client = get_mongo_client()
+            db = client[db_name]
+            schemas_collection = db['schemas']
+            result = schemas_collection.delete_one({"category": category})
+            client.close()
+            if result.deleted_count == 0:
+                logger.info(f"No schema found to delete for {db_name}.{category}")
+                return JsonResponse({'message': 'No schema found to delete'}, status=200)
+            logger.info(f"Deleted schema for {db_name}.{category}")
+            return JsonResponse({'message': 'Schema deleted successfully'}, status=200)
+        except Exception as e:
+            logger.error(f"Error deleting schema for {db_name}.{category}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def get_logs(request):
+    if request.method == 'GET':
+        try:
+            log_file = os.path.join('logs', 'ingestion.log')
+            if not os.path.exists(log_file):
+                logger.info(f"Log file {log_file} not found")
+                return JsonResponse({'logs': 'No logs available'}, status=200)
+            
+            with open(log_file, 'r', encoding='utf-8') as f:
+                logs = f.read()
+            
+            logger.info(f"Retrieved logs from {log_file}")
+            return JsonResponse({'logs': logs}, status=200)
+        except Exception as e:
+            logger.error(f"Error reading logs: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @csrf_exempt
 def upload_and_analyze(request):
     if request.method == 'POST' and request.FILES.get('file'):
         filename = request.FILES['file'].name
-        filepath = os.path.join(settings.MEDIA_ROOT, filename)      
-        logs = []  # Store logs here
+        db_name = request.POST.get('db_name')
+        filepath = os.path.join(settings.MEDIA_ROOT, filename)
+        logs = []
 
         os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
+
+        if not db_name:
+            logger.error("Missing db_name")
+            logs.append("Error: Missing db_name")
+            return JsonResponse({'error': 'Missing db_name', 'logs': logs}, status=400)
 
         try:
             logger.info(f"Saving file to: {filepath}")
@@ -92,7 +220,7 @@ def upload_and_analyze(request):
 
             logger.info("Starting data ingestion")
             logs.append("Starting data ingestion")
-            ingestion_result = data_ingestion_tool.invoke({"filepath": filepath, "filename": filename})
+            ingestion_result = ingest_file(filepath, filename, db_name)
             logger.debug(f"Ingestion result: {ingestion_result}")
             logs.append(f"Ingestion result: {ingestion_result}")
             if "error" in ingestion_result:
@@ -110,14 +238,14 @@ def upload_and_analyze(request):
 
             logger.info("Starting transformation")
             logs.append("Starting transformation")
-            transformation_result = transformation_tool.invoke({"filename": filename, "category": category})
+            transformation_result = transform_file(filename, category, db_name)  # Pass db_name
             logger.debug(f"Transformation result: {transformation_result}")
             logs.append(f"Transformation result: {transformation_result}")
-            if "error" in transformation_result:
-                logs.append(f"Transformation error: {transformation_result['error']}")
-                return JsonResponse({'error': transformation_result["error"], 'logs': logs}, status=500)
+            if not transformation_result:
+                logs.append("Transformation error: No output file generated")
+                return JsonResponse({'error': 'Transformation failed: No output file generated', 'logs': logs}, status=500)
 
-            clean_path = transformation_result.get("clean_path")
+            clean_path = transformation_result
             if not clean_path or not os.path.exists(clean_path):
                 logger.error(f"Transformed file not found at {clean_path}")
                 logs.append(f"Error: Transformed file not found at {clean_path}")
@@ -157,7 +285,7 @@ def upload_and_analyze(request):
 
             logger.info("Starting RAG embedding creation")
             logs.append("Starting RAG embedding creation")
-            rag_result = rag_tool.invoke({"filename": os.path.basename(clean_path), "csv_data": csv_data})
+            rag_result = run_rag_agent(os.path.basename(clean_path), csv_data)
             logger.debug(f"RAG embedding result: {rag_result}")
             logs.append(f"RAG embedding result: {rag_result}")
             if "error" in rag_result:

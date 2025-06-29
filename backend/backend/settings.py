@@ -138,7 +138,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI", "")
-MONGO_DB_NAME = "dataeng"
+
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 

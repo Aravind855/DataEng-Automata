@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaUpload, FaCheckCircle, FaSpinner, FaFileCsv, FaChartBar, FaComments } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaSpinner, FaFileCsv, FaChartBar, FaComments, FaHistory } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
 
 function Home() {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
+  const [dbName, setDbName] = useState('');
+  const [databases, setDatabases] = useState([]);
   const [uploadStatus, setUploadStatus] = useState('');
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [error, setError] = useState('');
@@ -22,12 +24,20 @@ function Home() {
   const [reportPath, setReportPath] = useState('');
   const [logs, setLogs] = useState([]);
   const [transformedFilename, setTransformedFilename] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [logContent, setLogContent] = useState('');
 
   useEffect(() => {
-    if (!navigate) {
-      console.error('useNavigate is not available. Ensure Home is rendered within a Router.');
-    }
-  }, [navigate]);
+    const fetchDatabases = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/list_databases/');
+        setDatabases(response.data.databases || []);
+      } catch (err) {
+        toast.error('Failed to fetch databases');
+      }
+    };
+    fetchDatabases();
+  }, []);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -55,15 +65,29 @@ function Home() {
     setTransformedFilename('');
   };
 
+  const toggleSidebar = async () => {
+    if (!isSidebarOpen) {
+      try {
+        const response = await axios.get('http://localhost:8000/api/get_logs/');
+        setLogContent(response.data.logs || 'No logs available');
+      } catch (err) {
+        toast.error('Failed to fetch logs');
+        setLogContent('Error: Unable to fetch logs');
+      }
+    }
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   const handleUpload = async () => {
-    if (!file) {
-      setError('Please select a file');
-      toast.error('Please select a file');
+    if (!file || !dbName) {
+      setError('Please select a file and database');
+      toast.error('Please select a file and database');
       return;
     }
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('db_name', dbName);
 
     try {
       setLoading(true);
@@ -77,7 +101,7 @@ function Home() {
 
       console.log('✅ Backend response:', response.data);
 
-      const { message, category, valid, transformation_result, transformed_filename, report_path, logs: backendLogs } = response.data;
+      const { message, category, valid, transformation_result, report_path, logs: backendLogs } = response.data;
 
       setLogs(backendLogs.map(log => ({
         text: log,
@@ -90,7 +114,7 @@ function Home() {
       if (transformation_result) {
         setProgress(66);
         setAgentStatus({ ...agentStatus, transformation: 'completed' });
-        setTransformedFilename(transformed_filename || transformation_result.split(/[\\/]/).pop()); // Handle both \ and /
+        setTransformedFilename(transformation_result.split(/[\\/]/).pop());
       }
 
       if (report_path) {
@@ -155,12 +179,21 @@ function Home() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl p-6"
+        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl p-6 relative"
       >
+        <button
+          onClick={toggleSidebar}
+          className="absolute top-4 right-4 text-gray-600 hover:text-blue-600 transition-all duration-300"
+          title="View Logs"
+        >
+          <FaHistory className="text-2xl" />
+        </button>
         <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center">
           <FaChartBar className="mr-2" /> DataEng-Automata
         </h1>
-
+        <Link to="/customize-schema" className="text-blue-600 hover:underline mb-4 inline-block">
+          Customize Schemas
+        </Link>
         <div className="space-y-6">
           <div
             className="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center transition-all duration-300 hover:border-blue-500"
@@ -185,10 +218,23 @@ function Home() {
             </label>
             {file && <p className="mt-2 text-sm text-gray-700">Selected: {file.name}</p>}
           </div>
-
+          <div>
+            <label className="block text-gray-700 font-semibold mb-1">Database</label>
+            <select
+              value={dbName}
+              onChange={(e) => setDbName(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+              required
+            >
+              <option value="" disabled>Select a database</option>
+              {databases.map((db) => (
+                <option key={db} value={db}>{db}</option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={handleUpload}
-            disabled={loading || !file}
+            disabled={loading || !file || !dbName}
             className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center transition-all duration-300"
           >
             {loading ? (
@@ -198,7 +244,6 @@ function Home() {
             )}
             {loading ? 'Processing...' : 'Upload & Analyze'}
           </button>
-
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
@@ -206,7 +251,6 @@ function Home() {
             ></div>
           </div>
           <p className="text-sm text-gray-600 text-center">Progress: {progress}%</p>
-
           <div className="space-y-4">
             {Object.entries(agentStatus).map(([agent, status]) => (
               <motion.div
@@ -222,7 +266,6 @@ function Home() {
               </motion.div>
             ))}
           </div>
-
           <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-60 overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Execution Logs</h3>
             <AnimatePresence>
@@ -240,7 +283,6 @@ function Home() {
               ))}
             </AnimatePresence>
           </div>
-
           {uploadStatus && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -250,7 +292,6 @@ function Home() {
               <strong>Status:</strong> {uploadStatus}
             </motion.div>
           )}
-
           {aiAnalysis && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -261,7 +302,6 @@ function Home() {
               <pre className="whitespace-pre-wrap text-gray-700">{aiAnalysis}</pre>
             </motion.div>
           )}
-
           <div className="flex space-x-4">
             {reportPath && (
               <button
@@ -280,7 +320,6 @@ function Home() {
               </button>
             )}
           </div>
-
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -298,6 +337,30 @@ function Home() {
           )}
         </div>
       </motion.div>
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'tween', duration: 0.3 }}
+            className="fixed top-0 right-0 h-full w-80 bg-white shadow-xl p-6 overflow-y-auto z-50"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Ingestion Logs</h2>
+              <button
+                onClick={toggleSidebar}
+                className="text-gray-600 hover:text-red-600 transition-all duration-300"
+              >
+                ×
+              </button>
+            </div>
+            <div className="text-sm text-gray-700 whitespace-pre-wrap">
+              {logContent}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
