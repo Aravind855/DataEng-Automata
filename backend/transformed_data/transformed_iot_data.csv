@@ -1,0 +1,21 @@
+sensor_id,timestamp,value,location,device_type,hour_of_day
+sensor-001,01-05-2024 08:00:00,23.5,Warehouse A,temperature,8
+sensor-002,01-05-2024 09:00:00,25.1,Warehouse B,humidity,9
+sensor-003,01-05-2024 10:00:00,22.9,Warehouse A,temperature,10
+sensor-004,01-05-2024 11:00:00,55.2,Warehouse C,humidity,11
+sensor-005,01-05-2024 12:00:00,75.3,Warehouse A,pressure,12
+sensor-006,01-05-2024 13:00:00,24.8,Warehouse B,temperature,13
+sensor-007,01-05-2024 14:00:00,60.4,Warehouse D,humidity,14
+sensor-008,01-05-2024 15:00:00,20.2,Warehouse C,temperature,15
+sensor-009,01-05-2024 16:00:00,76.1,Warehouse A,pressure,16
+sensor-010,01-05-2024 17:00:00,58.3,Warehouse D,humidity,17
+sensor-011,01-05-2024 18:00:00,21.9,Warehouse A,temperature,18
+sensor-012,01-05-2024 19:00:00,54.8,Warehouse C,humidity,19
+sensor-013,01-05-2024 20:00:00,80.0,Warehouse B,pressure,20
+sensor-014,01-05-2024 21:00:00,22.5,Warehouse A,temperature,21
+sensor-015,01-05-2024 22:00:00,56.6,Warehouse D,humidity,22
+sensor-016,01-05-2024 23:00:00,74.2,Warehouse C,pressure,23
+sensor-017,02-05-2024 00:00:00,24.0,Warehouse A,temperature,0
+sensor-018,02-05-2024 01:00:00,61.5,Warehouse B,humidity,1
+sensor-019,02-05-2024 02:00:00,78.9,Warehouse D,pressure,2
+sensor-020,02-05-2024 03:00:00,22.8,Warehouse A,temperature,3

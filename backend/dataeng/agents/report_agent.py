@@ -166,7 +166,7 @@ def run_report_agent(filename: str, category: str, db_name: str) -> str:
             tools=tools,
             verbose=True,
             handle_parsing_errors=True,
-            max_iterations=3
+            max_iterations=7
         )
 
         result = invoke_with_retry(executor, {
