@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaPaperPlane, FaSpinner, FaFileCsv } from 'react-icons/fa';
+import { FaPaperPlane, FaSpinner, FaFileCsv, FaChartLine } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import { useLocation, Link } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
+
 
 function Chat() {
   const [query, setQuery] = useState('');
@@ -24,7 +25,6 @@ function Chat() {
 
         const params = new URLSearchParams(location.search);
         const urlFilename = params.get('filename');
-        console.log('URL Filename:', urlFilename, 'Available Files:', files); // Debug log
         if (urlFilename && files.includes(urlFilename)) {
           setFilename(urlFilename);
         }
@@ -35,55 +35,52 @@ function Chat() {
     fetchFiles();
   }, [location.search]);
 
-    const handleQuerySubmit = async () => {
-      console.log('Submitting query:', { query, filename });
-      if (!query || !filename) {
-        toast.error('Please enter a query and select a file');
-        return;
-      }
+  const handleQuerySubmit = async () => {
+    if (!query || !filename) {
+      toast.error('Please enter a query and select a file');
+      return;
+    }
 
-      const newMessage = { text: query, sender: 'user', timestamp: new Date().toISOString() };
-      setMessages([...messages, newMessage]);
-      setLogs([...logs, { text: `User query: ${query}`, timestamp: new Date().toISOString() }]);
-      setLoading(true);
+    const newMessage = { text: query, sender: 'user', timestamp: new Date().toISOString() };
+    setMessages([...messages, newMessage]);
+    setLogs([...logs, { text: `User query: ${query}`, timestamp: new Date().toISOString() }]);
+    setLoading(true);
 
-      try {
-        // Create FormData to send data as form-encoded
-        const formData = new FormData();
-        formData.append('query', query);
-        formData.append('filename', filename);
+    try {
+      const formData = new FormData();
+      formData.append('query', query);
+      formData.append('filename', filename);
 
-        const response = await axios.post('http://localhost:8000/api/query_rag/', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+      const response = await axios.post('http://localhost:8000/api/query_rag/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
-        const { message, response: botResponse, logs: backendLogs } = response.data;
-        setMessages([...messages, newMessage, { text: botResponse, sender: 'bot', timestamp: new Date().toISOString() }]);
-        setLogs([...logs, ...backendLogs.map(log => ({ text: log, timestamp: new Date().toISOString() }))]);
-        toast.success(message);
-      } catch (err) {
-        const errorMsg = err.response?.data?.error || 'Failed to process query';
-        setMessages([
-          ...messages,
-          newMessage,
-          { text: errorMsg, sender: 'bot', timestamp: new Date().toISOString() }
-        ]);
-        setLogs([
-          ...logs,
-          ...(
-            err.response?.data?.logs?.map(log => ({
-              text: log,
-              timestamp: new Date().toISOString()
-            })) || [{ text: errorMsg, timestamp: new Date().toISOString() }]
-          )
-        ]);
-        toast.error(errorMsg);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const { message, response: botResponse, logs: backendLogs } = response.data;
+      setMessages([...messages, newMessage, { text: botResponse, sender: 'bot', timestamp: new Date().toISOString() }]);
+      setLogs([...logs, ...backendLogs.map(log => ({ text: log, timestamp: new Date().toISOString() }))]);
+      toast.success(message);
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to process query';
+      setMessages([
+        ...messages,
+        newMessage,
+        { text: errorMsg, sender: 'bot', timestamp: new Date().toISOString() }
+      ]);
+      setLogs([
+        ...logs,
+        ...(
+          err.response?.data?.logs?.map(log => ({
+            text: log,
+            timestamp: new Date().toISOString()
+          })) || [{ text: errorMsg, timestamp: new Date().toISOString() }]
+        )
+      ]);
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+      setQuery('');
+    }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -93,74 +90,114 @@ function Chat() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4">
-      <ToastContainer />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl bg-white rounded-xl shadow-2xl p-6 flex flex-col"
-      >
-        <h1 className="text-4xl font-bold text-center text-gray-800 mb-6 flex items-center justify-center">
-          <FaFileCsv className="mr-2" /> DataEng-Automata Chatbot
-        </h1>
-        <Link to="/" className="text-blue-600 hover:underline mb-4 inline-block">
-          ← Back to Home
-        </Link>
-        <div className="flex-grow flex flex-col space-y-4">
-          <div className="flex items-center space-x-4">
-            <label className="text-gray-700 font-semibold">Select Dataset:</label>
-            <select
-              value={filename}
-              onChange={(e) => setFilename(e.target.value)}
-              className="p-2 border rounded-lg flex-grow"
-            >
-              <option value="">Select a file</option>
-              {availableFiles.map((file) => (
-                <option key={file} value={file}>{file}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-grow bg-gray-50 border border-gray-200 p-4 rounded-lg max-h-96 overflow-y-auto">
-            <AnimatePresence>
-              {messages.map((msg, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} mb-2`}
-                >
-                  <div
-                    className={`p-3 rounded-lg max-w-md ${
-                      msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
-                    }`}
-                  >
-                    <span className="text-xs text-gray-500 block">{new Date(msg.timestamp).toLocaleTimeString()}</span>
-                    {msg.text}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-          <div className="flex items-center space-x-2">
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask a question about the dataset..."
-              className="flex-grow p-2 border rounded-lg resize-none h-12"
-            />
-            <button
-              onClick={handleQuerySubmit}
-              disabled={loading || !query || !filename}
-              className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center"
-            >
-              {loading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
-            </button>
-          </div>
-
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <ToastContainer position="top-right" autoClose={3000} />
+      {/* Header */}
+      <header className="bg-indigo-800 text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold flex items-center">
+            <FaChartLine className="mr-2" /> DataEng-Automata Chatbot
+          </h1>
+          <nav>
+            <Link to="/" className="text-indigo-200 hover:text-white transition-colors">
+              ← Back to Home
+            </Link>
+          </nav>
         </div>
-      </motion.div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto flex-grow p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto"
+        >
+          <div className="space-y-6">
+            {/* Dataset Selection */}
+            <div className="flex items-center space-x-4">
+              <label className="text-gray-700 font-semibold">Select Dataset:</label>
+              <select
+                value={filename}
+                onChange={(e) => setFilename(e.target.value)}
+                className="flex-grow p-3 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="" disabled>Select a file</option>
+                {availableFiles.map((file) => (
+                  <option key={file} value={file}>{file}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Chat Area */}
+            <div className="bg-gray-100 border border-gray-200 p-4 rounded-lg max-h-96 overflow-y-auto">
+              <AnimatePresence>
+                {messages.map((msg, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
+                  >
+                    <div
+                      className={`p-4 rounded-lg max-w-md ${
+                        msg.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800'
+                      } shadow-md`}
+                    >
+                      <span className="text-xs text-gray-500 block mb-1">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                      {msg.text}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Query Input */}
+            <div className="flex items-center space-x-2">
+              <textarea
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask a question about the dataset..."
+                className="flex-grow p-3 border rounded-lg resize-none h-16 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <button
+                onClick={handleQuerySubmit}
+                disabled={loading || !query || !filename}
+                className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 flex items-center transition-all duration-300"
+              >
+                {loading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
+              </button>
+            </div>
+
+            {/* Logs */}
+            <div className="bg-gray-100 border border-gray-200 p-4 rounded-lg max-h-60 overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Query Logs</h3>
+              <AnimatePresence>
+                {logs.map((log, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-sm text-gray-700 mb-1"
+                  >
+                    <span className="text-xs text-gray-500 mr-2">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                    {log.text}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        </motion.div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-indigo-800 text-white p-4 text-center">
+        <p>© 2025 DataEng-Automata. All rights reserved.</p>
+      </footer>
     </div>
   );
 }

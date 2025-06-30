@@ -1,5 +1,5 @@
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 import os
 import pandas as pd
@@ -11,6 +11,10 @@ from .agents.report_agent import run_report_agent
 from .agents.rag_agent import run_rag_agent
 from .agents.query_agent import process_query
 import json
+import markdown
+import subprocess
+import tempfile
+import re
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -192,6 +196,105 @@ def get_logs(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @csrf_exempt
+def download_pdf(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            report_path = data.get('report_path')
+            if not report_path:
+                logger.error("Missing report_path")
+                return JsonResponse({'error': 'Missing report_path'}, status=400)
+
+            # Validate report path
+            full_report_path = os.path.abspath(os.path.join('report', os.path.basename(report_path)))
+            if not os.path.exists(full_report_path) or not full_report_path.endswith('.md'):
+                logger.error(f"Report file not found or invalid: {full_report_path}")
+                return JsonResponse({'error': 'Report file not found or invalid'}, status=404)
+
+            # Read Markdown content
+            with open(full_report_path, 'r', encoding='utf-8') as f:
+                markdown_content = f.read()
+
+            # Convert Markdown to HTML
+            html_content = markdown.markdown(markdown_content, extensions=['tables', 'fenced_code'])
+
+            # Sanitize HTML to escape LaTeX special characters
+            html_content = re.sub(r'([#$%&_{}|\\])', r'\\\1', html_content)
+            html_content = html_content.replace('\n', '\\newline{}')
+
+            # LaTeX template
+            latex_template = r"""
+            \documentclass[a4paper,12pt]{article}
+            \usepackage[utf8]{inputenc}
+            \usepackage[T1]{fontenc}
+            \usepackage{geometry}
+            \usepackage{parskip}
+            \usepackage{markdown}
+            \usepackage{amsmath}
+            \usepackage{amsfonts}
+            \usepackage{graphicx}
+            \usepackage{hyperref}
+            \geometry{a4paper, margin=1in}
+            \title{Data Analysis Report}
+            \author{}
+            \date{\today}
+            \begin{document}
+            \maketitle
+            \begin{markdown}
+            %s
+            \end{markdown}
+            \end{document}
+            """
+
+            # Create temporary LaTeX file
+            with tempfile.NamedTemporaryFile(suffix='.tex', delete=False) as tex_file:
+                tex_content = latex_template % markdown_content
+                tex_file.write(tex_content.encode('utf-8'))
+                tex_file_path = tex_file.name
+
+            # Compile LaTeX to PDF using latexmk
+            pdf_path = os.path.splitext(tex_file_path)[0] + '.pdf'
+            try:
+                subprocess.run(
+                    ['latexmk', '-pdf', '-interaction=nonstopmode', tex_file_path],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(f"LaTeX compilation failed: {e.stderr.decode()}")
+                os.unlink(tex_file_path)
+                return JsonResponse({'error': 'Failed to generate PDF'}, status=500)
+
+            # Read PDF content
+            if not os.path.exists(pdf_path):
+                logger.error(f"PDF file not generated: {pdf_path}")
+                os.unlink(tex_file_path)
+                return JsonResponse({'error': 'PDF file not generated'}, status=500)
+
+            with open(pdf_path, 'rb') as f:
+                pdf_content = f.read()
+
+            # Clean up temporary files
+            for ext in ['.tex', '.aux', '.log', '.fls', '.fdb_latexmk', '.pdf']:
+                temp_file = os.path.splitext(tex_file_path)[0] + ext
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
+
+            # Return PDF as response
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            pdf_filename = os.path.splitext(os.path.basename(report_path))[0] + '.pdf'
+            response['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
+            logger.info(f"PDF generated and served: {pdf_filename}")
+            return response
+
+        except Exception as e:
+            logger.error(f"Error generating PDF for {report_path}: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
 def upload_and_analyze(request):
     if request.method == 'POST' and request.FILES.get('file'):
         filename = request.FILES['file'].name
@@ -271,7 +374,7 @@ def upload_and_analyze(request):
             logger.info("Starting report generation")
             logs.append("Starting report generation")
             try:
-                report_result = run_report_agent(os.path.basename(clean_path))
+                report_result = run_report_agent(os.path.basename(clean_path), category, db_name)  # Pass category and db_name
                 if report_result is None or not os.path.exists(report_result):
                     logger.error(f"Report generation failed for {clean_path}")
                     logs.append(f"Error: Report generation failed for {clean_path}")

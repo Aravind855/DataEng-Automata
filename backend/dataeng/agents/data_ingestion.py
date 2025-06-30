@@ -129,7 +129,7 @@ def identify_primary_key_tool(columns: list, db_name: str, category: str) -> str
 
         schema_columns = schema_doc["columns"]
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-pro",
             temperature=0.0,
             google_api_key=os.getenv("GOOGLE_API_KEY_data_ingestion"),
             timeout=30
@@ -295,7 +295,7 @@ def ingest_file(filepath: str, filename: str, db_name: str):
         # Initialize LangChain agent with Gemini
         try:
             llm = ChatGoogleGenerativeAI(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-pro",
                 temperature=0.0,
                 google_api_key=os.getenv("GOOGLE_API_KEY_data_ingestion"),
                 timeout=30
@@ -322,19 +322,28 @@ def ingest_file(filepath: str, filename: str, db_name: str):
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", """
-                You are a data ingestion agent that processes datasets in a strict sequence of steps. Execute each tool exactly once, in the following order, and stop immediately after producing the final output. Do not repeat any steps, call additional tools, or continue after step 6. If any tool returns an error, stop and output: Error: <error message>. If the schema is invalid, stop and output: Error: Schema validation failed. Follow these steps:
-                1. Call `classify_dataset_tool` to classify the dataset by matching columns to schemas in the database. Store the result as `category`.
-                2. Call `validate_schema_tool` to validate the schema for `category`. Store the result as `valid`.
-                3. If `valid` is False, output: Error: Schema validation failed.
-                4. If `valid` is True, call `identify_primary_key_tool` to determine the primary key.
-                5. If `valid` is True, call `insert_to_mongo_tool` to insert or update data into a MongoDB collection named after `category`, using the primary key.
-                6. If insertion succeeds, call `move_to_category_tool` to move the file to the appropriate folder.
-                7. Call `log_summary_tool` to log the results.
-                After step 7, output exactly:
-                Category: <category>
-                Valid: <true/false>
-                Ensure a newline character separates 'Category' and 'Valid' lines. Do not include any additional text, explanations, or characters. Stop execution immediately after producing this output. If any step fails, output: Error: <error message>.
-                
+                    You are a data ingestion agent designed to process datasets following a strict, single-pass workflow. Your primary goal is to execute a series of data processing tools exactly once, in the specified order, and then output the results in a predefined format. Crucially, you must avoid any redundant tool calls.
+                    Here's the procedure you will follow:
+                    Classify Dataset: Call classify_dataset_tool to determine the dataset's category by matching its columns to existing schemas in the database. You'll be provided with the database name (db_name) and a list of column names (columns). Store the category returned by the tool in a variable named category.
+                    Validate Schema: Call validate_schema_tool to validate the schema corresponding to the category you identified in Step 1. Store the validation result (True or False) in a variable named valid.
+                    Handle Invalid Schema: If valid is False, immediately output: Error: Schema validation failed and stop all further processing.
+                    Identify Primary Key (If Valid): If valid is True, call identify_primary_key_tool. Use the category from Step 1 to specify which schema to use for primary key identification. The tool will return the primary key for that schema.
+                    Insert/Update Data (If Valid): If valid is True, call insert_to_mongo_tool to insert or update the data into a MongoDB collection. The collection name should be the same as the category you determined in Step 1. Use the primary key identified in Step 4 for the insertion/update operation.
+                    Move File (If Insertion Successful): If the insertion in Step 5 is successful (i.e., no error is returned by the tool), call move_to_category_tool to move the data file to the appropriate folder based on the category from Step 1.
+                    Output Final Result: After completing Step 6 (or encountering a validation failure in Step 3), output the following two lines, separated by a newline character, exactly as shown:
+                    Generated code
+                    Category: <category>
+                    Valid: <true/false>
+                    Use code with caution.
+                    Replace <category> with the value obtained in Step 1 and <true/false> with the value of valid obtained in Step 2.
+                    Important Notes:
+                    Execute Each Tool Once: You must call each tool exactly one time, in the order specified above.
+                    Stop on Error: If any tool returns an error, immediately output: Error: <error message> (replacing <error message> with the actual error message) and stop all further processing.
+                    Adhere to Output Format: The final output must be in the exact format specified in Step 7. Do not include any extra text, explanations, or formatting.
+                    No Iteration: You are not permitted to iterate or retry any steps. The process is strictly linear.
+                    No Additional Tools: Do not call any tools other than the ones listed above.
+                    Stop After Step 6/Output: Do not perform any actions after Step 6 or after producing the final output in Step 7.
+                    By following these instructions carefully, you will correctly process the dataset and provide the required output.                     
             """),
             ("human", """
                 Analyze this file for ingestion:
@@ -342,13 +351,20 @@ def ingest_file(filepath: str, filename: str, db_name: str):
                 File path: {file_path}
                 Database: {db_name}
                 Columns: {columns}
-                Execute the steps in sequence as instructed in the system prompt.
+                Execute the steps in sequence as instructed 
+                step 1 : Classify Dataset
+                step 2 : Validate Schema
+                step 3 : Identify Primary Key
+                step 4 : Insert/Update Data
+                step 5 : Move File
+                step 6 : Log Summary
+                Ensure to follow the exact order and stop on any error.
                 {agent_scratchpad}
             """)
         ])
 
         agent = create_openai_functions_agent(llm=llm, tools=tools, prompt=prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True, max_iterations=3)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True, max_iterations=10)
 
         try:
             start_time = time.time()
