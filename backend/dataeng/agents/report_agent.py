@@ -76,7 +76,7 @@ def run_report_agent(filename: str) -> str:
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
             temperature=0,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
+            google_api_key=os.getenv("GOOGLE_API_KEY_report_agent")
         )
 
         tools = [generate_report]

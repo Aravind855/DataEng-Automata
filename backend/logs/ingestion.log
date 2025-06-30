@@ -1,5 +1,5 @@
-sales_data.csv | Category: sales | Valid: True | Time: 2025-06-29 22:13:17.686129
-sales_data.csv | Category: sales | Valid: True | Time: 2025-06-29 22:21:21.437409
-sales_data.csv | Category: sales | Valid: True | Time: 2025-06-29 22:31:47.089092
-sales_data.csv | Category: sales | Valid: True | Time: 2025-06-29 22:44:25.414675
-sales_data.csv | Category: sales | Valid: True | Time: 2025-06-29 22:51:40.318063
+iot_data.json | Category: IoT | Valid: True | Time: 2025-06-30 11:59:53.593450
+iot_data.json | Category: IoT | Valid: True | Time: 2025-06-30 12:13:10.047773
+sales_data.csv | Category: Sales | Valid: True | Time: 2025-06-30 12:47:22.509063
+hr_data.csv | Category: Hr | Valid: True | Time: 2025-06-30 13:04:09.856870
+hr_data.csv | Category: Hr | Valid: True | Time: 2025-06-30 13:08:31.245143

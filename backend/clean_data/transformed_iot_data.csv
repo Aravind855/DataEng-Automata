@@ -1,0 +1,21 @@
+sensor_id,timestamp,value,location,device_type,day_of_week
+sensor-001,2024-05-01,23.5,Warehouse A,temperature,Wednesday
+sensor-002,2024-05-01,25.1,Warehouse B,humidity,Wednesday
+sensor-003,2024-05-01,22.9,Warehouse A,temperature,Wednesday
+sensor-004,2024-05-01,55.2,Warehouse C,humidity,Wednesday
+sensor-005,2024-05-01,75.3,Warehouse A,pressure,Wednesday
+sensor-006,2024-05-01,24.8,Warehouse B,temperature,Wednesday
+sensor-007,2024-05-01,60.4,Warehouse D,humidity,Wednesday
+sensor-008,2024-05-01,20.2,Warehouse C,temperature,Wednesday
+sensor-009,2024-05-01,76.1,Warehouse A,pressure,Wednesday
+sensor-010,2024-05-01,58.3,Warehouse D,humidity,Wednesday
+sensor-011,2024-05-01,21.9,Warehouse A,temperature,Wednesday
+sensor-012,2024-05-01,54.8,Warehouse C,humidity,Wednesday
+sensor-013,2024-05-01,80.0,Warehouse B,pressure,Wednesday
+sensor-014,2024-05-01,22.5,Warehouse A,temperature,Wednesday
+sensor-015,2024-05-01,56.6,Warehouse D,humidity,Wednesday
+sensor-016,2024-05-01,74.2,Warehouse C,pressure,Wednesday
+sensor-017,2024-05-02,24.0,Warehouse A,temperature,Thursday
+sensor-018,2024-05-02,61.5,Warehouse B,humidity,Thursday
+sensor-019,2024-05-02,78.9,Warehouse D,pressure,Thursday
+sensor-020,2024-05-02,22.8,Warehouse A,temperature,Thursday

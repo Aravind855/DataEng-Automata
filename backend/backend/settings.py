@@ -140,7 +140,12 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI", "")
 
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+GOOGLE_API_KEY_DATA_INGESTION = os.getenv("GOOGLE_API_KEY_data_ingestion", "")
+GOOGLE_API_KEY_TRANSFORMATION_AGENT = os.getenv("GOOGLE_API_KEY_transformation_agent", "")
+GOOGLE_API_KEY_REPORT_AGENT = os.getenv("GOOGLE_API_KEY_report_agent", "")
+GOOGLE_API_KEY_RAG_AGENT = os.getenv("GOOGLE_API_KEY_rag_agent", "")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")  # Fallback key
+MONGO_URI = os.getenv("MONGO_URI", "")
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

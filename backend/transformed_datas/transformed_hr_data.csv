@@ -1,0 +1,21 @@
+employee_id,name,salary,designation,joining_date,years_of_experience
+101,John Doe,60000,Manager,01-05-2020,3
+102,Jane Smith,50000,Developer,15-07-2021,2
+103,Robert Brown,55000,Developer,01-08-2021,2
+104,Emily Davis,48000,Tester,10-01-2022,1
+105,Michael Wilson,62000,Manager,23-11-2019,4
+106,Linda Johnson,47000,Tester,17-03-2021,2
+107,William Moore,53000,Developer,05-12-2020,3
+108,Barbara Taylor,46000,HR,20-06-2022,1
+109,James Anderson,59000,Manager,30-09-2020,3
+110,Patricia Thomas,52000,Developer,25-10-2021,2
+111,Christopher Jackson,51000,Tester,14-02-2022,1
+112,Mary White,48000,HR,10-01-2023,0
+113,Daniel Harris,56000,Developer,18-04-2021,2
+114,Jennifer Martin,62000,Manager,05-03-2020,3
+115,Matthew Thompson,49500,Tester,12-09-2022,1
+116,Susan Garcia,54000,Developer,03-03-2023,0
+117,Andrew Martinez,50000,Tester,01-12-2021,2
+118,Karen Robinson,47000,HR,22-07-2022,1
+119,Joshua Clark,61000,Manager,08-08-2019,4
+120,Nancy Rodriguez,53000,Developer,27-04-2023,0

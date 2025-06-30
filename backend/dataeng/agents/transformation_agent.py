@@ -63,13 +63,13 @@ def analyze_and_transform(filename: str, category: str, db_name: str) -> str:
 
         # Initialize Gemini LLM
         llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             temperature=0.0,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
+            google_api_key=os.getenv("GOOGLE_API_KEY_transformation_agent")
         )
-        if not os.getenv("GOOGLE_API_KEY"):
-            logger.error("GOOGLE_API_KEY not set in environment variables")
-            return f"Error: GOOGLE_API_KEY not set"
+        if not os.getenv("GOOGLE_API_KEY_transformation_agent"):
+                logger.error("GOOGLE_API_KEY_transformation_agent not set in environment variables")
+                return f"Error: GOOGLE_API_KEY not set"
 
         # Define prompt for transformation
         prompt = ChatPromptTemplate.from_messages([
@@ -78,10 +78,12 @@ def analyze_and_transform(filename: str, category: str, db_name: str) -> str:
              1. Fix missing or null values (fill numeric columns with the mean, non-numeric with 'Unknown').
              2. Remove duplicate rows.
              3. Perform feature engineering by deriving a new column based on the category:
-                - For 'sales', derive 'day_of_week' from the 'date' column.
-                - For 'hr', derive 'years_of_service' from 'joining_date' and 'month' from 'joining_date'.
-                - For 'iot', derive 'year' and 'hour' from 'timestamp'.
-             4. Ensure all date columns are in 'YYYY-MM-DD' format and numeric columns are properly typed.
+                for example: 
+                - we can derive 'day_of_week' from a 'date' column , or derive age from a 'date_of_birth' column 
+                like this we can do some feature engineering based on the category., dont follow the above example , just take it as a reference and
+                similarly analyse the given dataset and the columns and derive a new column based on the category.
+            
+             4. Ensure all date columns are in 'DD-MM-YYYY' format and numeric columns are properly typed.
              Return ONLY the transformed data in CSV format with headers, without any additional text, explanations, or markdown (e.g., no ```csv or backticks).
             """),
             ("human", "Transform this data from MongoDB collection:\n"
@@ -134,7 +136,8 @@ def ingest_transformed_tool(filename: str, category: str, db_name: str, csv_data
     """
     logger.debug(f"Ingesting transformed data for {filename} into {db_name}.transformed_{category}")
     try:
-        # Read and validate CSV data
+        # Read and validate CSV
+        # data
         df = pd.read_csv(io.StringIO(csv_data))
         if df.empty:
             logger.error(f"Empty transformed data for {filename}")
@@ -183,13 +186,13 @@ def transform_file(filename: str, category: str, db_name: str) -> str:
     
     # Initialize LangChain agent with Gemini
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
+        model="gemini-2.0-flash",
         temperature=0.0,
-        google_api_key=os.getenv("GOOGLE_API_KEY")
+        google_api_key=os.getenv("GOOGLE_API_KEY_transformation_agent")
     )
-    if not os.getenv("GOOGLE_API_KEY"):
-        logger.error("GOOGLE_API_KEY not set in environment variables")
-        return None
+    if not os.getenv("GOOGLE_API_KEY_transformation_agent"):
+            logger.error("GOOGLE_API_KEY_transformation_agent not set in environment variables")
+            return None
 
     tools = [analyze_and_transform, ingest_transformed_tool]
     prompt = ChatPromptTemplate.from_messages([
@@ -232,7 +235,7 @@ def transform_file(filename: str, category: str, db_name: str) -> str:
             return None
 
         clean_filename = f"transformed_{os.path.splitext(filename)[0]}.csv"
-        clean_path = os.path.join(TRANSFORMED_DIR, clean_filename)
+        clean_path = os.path.join(CLEAN_DIR, clean_filename)
         transformed_path = os.path.join(TRANSFORMED_DIR, clean_filename)
 
         # Save to clean_data/
