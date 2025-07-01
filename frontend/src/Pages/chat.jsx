@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import React from 'react';
-
+import React from 'react'
 import axios from "axios"
 import {
   FaPaperPlane,
@@ -22,6 +21,7 @@ import { toast, ToastContainer } from "react-toastify"
 import { useLocation, Link } from "react-router-dom"
 import "react-toastify/dist/ReactToastify.css"
 
+// DataFlowBackground component
 const DataFlowBackground = () => {
   const canvasRef = useRef(null)
 
@@ -210,12 +210,12 @@ function Chat() {
   ]
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white overflow-hidden">
       <DataFlowBackground />
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Header */}
-      <header className="backdrop-blur-md bg-white/10 border-b border-white/20 shadow-lg z-50 relative">
+      <header className="backdrop-blur-md bg-white/10 border-b border-white/20 shadow-lg z-50 sticky top-0">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
@@ -255,8 +255,8 @@ function Chat() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto py-8 px-6 z-10 relative">
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 h-[calc(100vh-200px)]">
+      <main className="flex-grow container mx-auto py-8 px-6 z-10 relative">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 h-full">
           {/* Left Sidebar - Dataset Selection & Info */}
           <div className="xl:col-span-1 space-y-6">
             {/* Dataset Selection */}

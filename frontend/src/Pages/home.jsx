@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -19,7 +20,6 @@ import { toast, ToastContainer } from "react-toastify"
 import { useNavigate, Link } from "react-router-dom"
 import "react-toastify/dist/ReactToastify.css"
 import React from 'react';
-
 
 const DataFlowBackground = () => {
   const canvasRef = useRef(null)
@@ -226,7 +226,7 @@ function Home() {
         headers: { "Content-Type": "multipart/form-data" },
       })
 
-      const { message, category, valid, transformation_result, report_path, logs: backendLogs } = response.data
+      const { message, category, valid, transformation_result, report_path, vector_db_path, logs: backendLogs } = response.data
 
       setLogs(
         backendLogs.map((log) => ({
@@ -235,62 +235,34 @@ function Home() {
         })),
       )
 
-      let taskProgress = 10
-      const ingestionTasks = ["classification", "validation", "primaryKey", "insertion", "move", "log"]
-
-      ingestionTasks.forEach((task, index) => {
-        setTimeout(
-          () => {
-            setAgentStatus((prev) => ({
-              ...prev,
-              ingestion: {
-                ...prev.ingestion,
-                tasks: { ...prev.ingestion.tasks, [task]: "completed" },
-              },
-            }))
-            taskProgress += 15
-            setProgress(taskProgress)
+      setAgentStatus({
+        ingestion: {
+          status: "completed",
+          tasks: {
+            classification: "completed",
+            validation: "completed",
+            primaryKey: "completed",
+            insertion: "completed",
+            move: "completed",
+            log: "completed",
           },
-          (index + 1) * 500,
-        )
+        },
+        transformation: transformation_result ? "completed" : "pending",
+        report: report_path ? "completed" : "pending",
       })
 
-      setTimeout(() => {
-        setAgentStatus((prev) => ({
-          ...prev,
-          ingestion: { ...prev.ingestion, status: "completed" },
-        }))
-        setProgress(40)
-      }, 3500)
-
-      setTimeout(() => {
-        setAgentStatus((prev) => ({ ...prev, transformation: "running" }))
-        setProgress(50)
-      }, 4000)
-
+      let finalProgress = 40
       if (transformation_result) {
-        setTimeout(() => {
-          setAgentStatus((prev) => ({ ...prev, transformation: "completed" }))
-          setTransformedFilename(transformation_result.split(/[\\/]/).pop())
-          setProgress(80)
-        }, 4500)
+        finalProgress = 80
+        setTransformedFilename(transformation_result.split(/[\\/]/).pop())
       }
-
-      setTimeout(() => {
-        setAgentStatus((prev) => ({ ...prev, report: "running" }))
-        setProgress(90)
-      }, 5000)
-
       if (report_path) {
-        setTimeout(() => {
-          setAgentStatus((prev) => ({ ...prev, report: "completed" }))
-          setReportPath(report_path)
-          setProgress(100)
-        }, 5500)
+        finalProgress = 100
       }
+      setProgress(finalProgress)
 
       setUploadStatus(message)
-      setAiAnalysis(JSON.stringify({ category, valid, transformation_result, report_path }, null, 2))
+      setAiAnalysis(JSON.stringify({ category, valid, transformation_result, report_path, vector_db_path }, null, 2))
       toast.success("Process completed successfully!")
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message || "Upload failed"
@@ -307,7 +279,7 @@ function Home() {
         })) || [{ text: errorMsg, timestamp: new Date().toISOString() }],
       )
     } finally {
-      setTimeout(() => setLoading(false), 6000)
+      setLoading(false)
     }
   }
 
@@ -382,11 +354,11 @@ function Home() {
     },
     transformation: {
       title: "Data Transformation",
-      tasks: [ "Data Cleaning", "Feature Engineering", "Transformed data ingestion"],
+      tasks: ["Data Cleaning", "Feature Engineering", "Transformed data ingestion"],
     },
     report: {
       title: "Report Generation",
-      tasks: ["Anamoly Detection", "Data Profiling", "Report Generation"],
+      tasks: ["Anomaly Detection", "Data Profiling", "Report Generation"],
     },
   }
 
@@ -442,7 +414,7 @@ function Home() {
       </header>
 
       {/* Product Introduction */}
-      <section className="container mx-auto px-6 py-12 text-center z-12 relative">
+      <section className="container mx-auto px-10 py-16 text-center z-12 relative">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
           <h2 className="text-4xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             Intelligent Data Engineering Platform

@@ -48,7 +48,7 @@ def process_query(query: str, filename: str) -> str:
         query_embedding = np.array(query_embedding, dtype='float32')
 
         # Search FAISS index
-        k = 5  # Number of nearest neighbors
+        k = 20  # Number of nearest neighbors
         distances, indices = index.search(query_embedding, k)
         retrieved_texts = [texts[i] for i in indices[0]]
         context = "\n".join(retrieved_texts)

@@ -341,7 +341,7 @@ def upload_and_analyze(request):
 
             logger.info("Starting transformation")
             logs.append("Starting transformation")
-            transformation_result = transform_file(filename, category, db_name)  # Pass db_name
+            transformation_result = transform_file(filename, category, db_name)
             logger.debug(f"Transformation result: {transformation_result}")
             logs.append(f"Transformation result: {transformation_result}")
             if not transformation_result:
@@ -374,7 +374,7 @@ def upload_and_analyze(request):
             logger.info("Starting report generation")
             logs.append("Starting report generation")
             try:
-                report_result = run_report_agent(os.path.basename(clean_path), category, db_name)  # Pass category and db_name
+                report_result = run_report_agent(os.path.basename(clean_path), category, db_name)
                 if report_result is None or not os.path.exists(report_result):
                     logger.error(f"Report generation failed for {clean_path}")
                     logs.append(f"Error: Report generation failed for {clean_path}")
@@ -391,11 +391,13 @@ def upload_and_analyze(request):
             rag_result = run_rag_agent(os.path.basename(clean_path), csv_data)
             logger.debug(f"RAG embedding result: {rag_result}")
             logs.append(f"RAG embedding result: {rag_result}")
-            if "error" in rag_result:
-                logs.append(f"RAG embedding error: {rag_result['error']}")
-                return JsonResponse({'error': rag_result["error"], 'logs': logs}, status=500)
+            # Handle error string from run_rag_agent
+            if isinstance(rag_result, str) and rag_result.startswith("Error:"):
+                logger.error(f"RAG embedding failed: {rag_result}")
+                logs.append(f"RAG embedding failed: {rag_result}")
+                return JsonResponse({'error': rag_result, 'logs': logs}, status=500)
 
-            vector_db_path = rag_result.get("vector_db_path")
+            vector_db_path = rag_result  # rag_result is a string (path to FAISS index)
             if not vector_db_path or not os.path.exists(vector_db_path):
                 logger.error(f"Vector DB not found at {vector_db_path}")
                 logs.append(f"Error: Vector DB not found at {vector_db_path}")
@@ -412,7 +414,7 @@ def upload_and_analyze(request):
             })
 
         except Exception as e:
-            logger.error(f"Pipeline error: {e}")
+            logger.error(f"Pipeline error: {str(e)}")
             logs.append(f"Pipeline error: {str(e)}")
             return JsonResponse({'error': str(e), 'logs': logs}, status=500)
 

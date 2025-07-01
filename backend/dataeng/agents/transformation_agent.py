@@ -65,7 +65,7 @@ def analyze_and_transform(filename: str, category: str, db_name: str) -> str:
 
         # Initialize Gemini LLM
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro",  # Updated to stable model
+            model="gemini-2.0-flash",  # Updated to stable model
             temperature=0.0,
             google_api_key=os.getenv("GOOGLE_API_KEY_transformation_agent")
         )
@@ -191,7 +191,7 @@ def transform_file(filename: str, category: str, db_name: str) -> str:
     
     # Initialize LangChain agent with Gemini
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",  # Updated to stable model
+        model="gemini-2.0-flash",  # Updated to stable model
         temperature=0.0,
         google_api_key=os.getenv("GOOGLE_API_KEY_transformation_agent")
     )

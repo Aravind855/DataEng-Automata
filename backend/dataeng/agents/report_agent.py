@@ -108,7 +108,7 @@ def run_report_agent(filename: str, category: str, db_name: str) -> str:
             expected_columns = df.columns.tolist()
 
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro",  # Standardized model
+            model="gemini-1.5-flash",  # Standardized model
             temperature=0,
             google_api_key=os.getenv("GOOGLE_API_KEY_report_agent")
         )

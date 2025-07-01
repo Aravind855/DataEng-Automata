@@ -129,7 +129,7 @@ def identify_primary_key_tool(columns: list, db_name: str, category: str) -> str
 
         schema_columns = schema_doc["columns"]
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro",
+            model="gemini-2.0-flash",
             temperature=0.0,
             google_api_key=os.getenv("GOOGLE_API_KEY_data_ingestion"),
             timeout=30
@@ -295,7 +295,7 @@ def ingest_file(filepath: str, filename: str, db_name: str):
         # Initialize LangChain agent with Gemini
         try:
             llm = ChatGoogleGenerativeAI(
-                model="gemini-2.5-pro",
+                model="gemini-2.0-flash",
                 temperature=0.0,
                 google_api_key=os.getenv("GOOGLE_API_KEY_data_ingestion"),
                 timeout=30

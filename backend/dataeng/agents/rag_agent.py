@@ -87,9 +87,9 @@ def run_rag_agent(filename: str, csv_data: str) -> str:
             return "Error: No CSV data provided"
 
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model="gemini-1.5-flash",
             temperature=0.0,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
+            google_api_key=os.getenv("GOOGLE_API_KEY_rag_agent")
         )
         tools = [create_embeddings]
         prompt = ChatPromptTemplate.from_messages([
