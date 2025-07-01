@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -31,16 +30,16 @@ const DataFlowBackground = () => {
     canvas.height = window.innerHeight
 
     const particlesArray = []
-    const numberOfParticles = 150
+    const numberOfParticles = 100
 
     class Particle {
       constructor() {
         this.x = Math.random() * canvas.width
         this.y = Math.random() * canvas.height
-        this.size = Math.random() * 2 + 1
-        this.speedX = Math.random() * 2 - 1
-        this.speedY = Math.random() * 2 - 1
-        this.color = `hsl(${Math.random() * 360}, 70%, 50%)`
+        this.size = Math.random() * 2 + 0.5
+        this.speedX = Math.random() * 1.5 - 0.75
+        this.speedY = Math.random() * 1.5 - 0.75
+        this.color = `hsl(${Math.random() * 60 + 180}, 30%, 60%)` // Metallic blue-gray tones
       }
 
       update() {
@@ -53,7 +52,7 @@ const DataFlowBackground = () => {
       }
 
       draw() {
-        ctx.fillStyle = `rgba(255, 255, 255, 0.1)`
+        ctx.fillStyle = `rgba(255, 255, 255, 0.2)`
         ctx.beginPath()
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
         ctx.fill()
@@ -62,9 +61,9 @@ const DataFlowBackground = () => {
           const dx = this.x - particlesArray[i].x
           const dy = this.y - particlesArray[i].y
           const distance = Math.sqrt(dx * dx + dy * dy)
-          if (distance < 100) {
-            ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 - distance / 2000})`
-            ctx.lineWidth = 0.5
+          if (distance < 120) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - distance / 2400})`
+            ctx.lineWidth = 0.3
             ctx.beginPath()
             ctx.moveTo(this.x, this.y)
             ctx.lineTo(particlesArray[i].x, particlesArray[i].y)
@@ -79,7 +78,7 @@ const DataFlowBackground = () => {
     }
 
     function animate() {
-      ctx.fillStyle = "rgba(26, 26, 46, 0.8)"
+      ctx.fillStyle = "rgba(15, 23, 42, 0.9)" // Dark slate background
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       for (let i = 0; i < particlesArray.length; i++) {
         particlesArray[i].update()
@@ -258,7 +257,7 @@ function Home() {
       }
       if (report_path) {
         finalProgress = 100
-        setReportPath(report_path) // Ensure reportPath is set
+        setReportPath(report_path)
       }
       setProgress(finalProgress)
 
@@ -364,47 +363,51 @@ function Home() {
   }
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-slate-950 text-gray-200 font-sans">
       <DataFlowBackground />
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} theme="dark" />
 
       {/* Header */}
-      <header className="backdrop-blur-md bg-white/10 border-b border-white/20 shadow-lg z-50 relative">
+      <header className="bg-slate-900/90 backdrop-blur-lg border-b border-slate-700 shadow-md z-50 sticky top-0 shrink-0">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <FaRocket className="text-white text-xl" />
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md flex items-center justify-center shadow-lg">
+                <FaRocket className="text-gray-200 text-xl" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-semibold tracking-tight text-gray-100">
                 DataEng-Automata
               </h1>
+              <div className="hidden md:flex items-center space-x-2">
+                <FaDatabase className="text-blue-400" />
+                <span className="text-gray-400 text-sm">Data Ingestion</span>
+              </div>
             </div>
-            <nav className="flex space-x-8">
+            <nav className="flex space-x-6">
               <Link
                 to="/"
-                className="text-white/80 hover:text-white transition-colors flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-white/10"
+                className="text-blue-400 flex items-center space-x-2 px-3 py-2 rounded-md bg-slate-800"
               >
                 <FaDatabase className="text-sm" />
                 <span>Home</span>
               </Link>
               <Link
                 to="/chat"
-                className="text-white/80 hover:text-white transition-colors flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-white/10"
+                className="text-gray-400 hover:text-gray-100 transition-colors flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-800"
               >
                 <FaComments className="text-sm" />
                 <span>Chat</span>
               </Link>
               <Link
                 to="/customize-schema"
-                className="text-white/80 hover:text-white transition-colors flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-white/10"
+                className="text-gray-400 hover:text-gray-100 transition-colors flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-800"
               >
                 <FaCog className="text-sm" />
                 <span>Schema</span>
               </Link>
               <button
                 onClick={toggleSidebar}
-                className="text-white/80 hover:text-white transition-colors flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-white/10"
+                className="text-gray-400 hover:text-gray-100 transition-colors flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-slate-800"
               >
                 <FaHistory className="text-sm" />
                 <span>Logs</span>
@@ -415,12 +418,12 @@ function Home() {
       </header>
 
       {/* Product Introduction */}
-      <section className="container mx-auto px-10 py-16 text-center z-12 relative">
+      <section className="container mx-auto px-6 py-16 text-center z-10 relative">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-          <h2 className="text-4xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <h2 className="text-4xl font-bold mb-6 text-gray-100">
             Intelligent Data Engineering Platform
           </h2>
-          <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
             Transform your raw data into actionable insights with our AI-powered automation platform. Streamline data
             ingestion, transformation, and reporting with intelligent processing workflows.
           </p>
@@ -428,21 +431,21 @@ function Home() {
       </section>
 
       {/* Main Content */}
-      <main className="container mx-auto py-8 px-6 z-10 relative">
+      <main className="flex-grow container mx-auto py-8 px-6 z-10 relative">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Upload Dataset Card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="backdrop-blur-md bg-white/10 p-8 rounded-2xl shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300"
+            className="bg-slate-900/80 backdrop-blur-lg p-8 rounded-xl shadow-xl border border-slate-700 hover:bg-slate-900/90 transition-all duration-300"
           >
-            <h2 className="text-2xl font-semibold mb-6 flex items-center">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-100">
               <FaUpload className="mr-3 text-blue-400" /> Upload Dataset
             </h2>
 
             <div
-              className="border-2 border-dashed border-blue-400/50 p-8 rounded-xl text-center hover:border-blue-400 transition-colors duration-300 mb-6"
+              className="border-2 border-dashed border-blue-400/30 p-8 rounded-xl text-center hover:border-blue-400/50 transition-colors duration-300 mb-6"
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
@@ -455,28 +458,28 @@ function Home() {
               />
               <label htmlFor="fileInput" className="cursor-pointer flex flex-col items-center">
                 <FaUpload className="text-5xl text-blue-400 mb-4" />
-                <p className="text-white/80 text-lg mb-2">Drag & drop or click to select</p>
-                <p className="text-white/60 text-sm">Supported formats: .csv, .json, .xlsx</p>
+                <p className="text-gray-200 text-lg mb-2">Drag & drop or click to select</p>
+                <p className="text-gray-400 text-sm">Supported formats: .csv, .json, .xlsx</p>
               </label>
               {file && (
-                <div className="mt-4 p-3 bg-white/10 rounded-lg">
-                  <p className="text-sm text-green-400">Selected: {file.name}</p>
+                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-sm text-blue-400">Selected: {file.name}</p>
                 </div>
               )}
             </div>
 
             <div className="mb-6">
-              <label className="block text-white/80 font-semibold mb-3 text-lg">Database Selection</label>
+              <label className="block text-gray-300 font-semibold mb-3 text-lg">Database Selection</label>
               <select
                 value={dbName}
                 onChange={(e) => setDbName(e.target.value)}
-                className="w-full p-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                className="w-full p-4 bg-slate-800 border border-slate-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               >
-                <option value="" disabled className="text-gray-600">
+                <option value="" disabled className="text-gray-500">
                   Select a database
                 </option>
                 {databases.map((db) => (
-                  <option key={db} value={db} className="text-gray-800 bg-white">
+                  <option key={db} value={db} className="text-gray-200 bg-slate-800">
                     {db}
                   </option>
                 ))}
@@ -486,7 +489,7 @@ function Home() {
             <button
               onClick={handleUpload}
               disabled={loading || !file || !dbName}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 flex items-center justify-center transition-all duration-300 text-lg font-semibold shadow-lg"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-gray-100 p-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-600 disabled:to-slate-600 flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg text-lg font-semibold"
             >
               {loading ? <FaSpinner className="animate-spin mr-3" /> : <FaUpload className="mr-3" />}
               {loading ? "Processing..." : "Upload & Analyze"}
@@ -498,12 +501,12 @@ function Home() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-            className="backdrop-blur-md bg-white/10 p-8 rounded-2xl shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300"
+            className="bg-slate-900/80 backdrop-blur-lg p-8 rounded-xl shadow-xl border border-slate-700 hover:bg-slate-900/90 transition-all duration-300"
           >
-            <h2 className="text-2xl font-semibold mb-6 flex items-center">
-              <FaHistory className="mr-3 text-green-400" /> Execution Logs
+            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-100">
+              <FaHistory className="mr-3 text-blue-400" /> Execution Logs
             </h2>
-            <div className="bg-black/30 backdrop-blur-sm border border-white/10 p-6 rounded-xl max-h-80 overflow-y-auto">
+            <div className="bg-slate-800/50 border border-slate-600 p-6 rounded-lg max-h-80 overflow-y-auto">
               <AnimatePresence>
                 {logs.length > 0 ? (
                   logs.map((log, index) => (
@@ -512,7 +515,7 @@ function Home() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="text-sm text-white/70 mb-2 p-2 rounded bg-white/5"
+                      className="text-sm text-gray-300 mb-2 p-2 rounded bg-slate-800/50 border border-slate-600"
                     >
                       <span className="text-xs text-blue-400 mr-3 font-mono">
                         {new Date(log.timestamp).toLocaleTimeString()}
@@ -521,7 +524,7 @@ function Home() {
                     </motion.div>
                   ))
                 ) : (
-                  <div className="text-center text-white/50 py-8">
+                  <div className="text-center text-gray-400 py-8">
                     <FaHistory className="text-4xl mx-auto mb-4 opacity-50" />
                     <p>No logs available yet</p>
                     <p className="text-sm mt-2">Upload a dataset to see execution logs</p>
@@ -532,15 +535,15 @@ function Home() {
           </motion.div>
         </div>
 
-        {/* Processing Roadmap - Vertical */}
+        {/* Processing Roadmap */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="backdrop-blur-md bg-white/10 p-8 rounded-2xl shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 mb-8"
+          className="bg-slate-900/80 backdrop-blur-lg p-8 rounded-xl shadow-xl border border-slate-700 hover:bg-slate-900/90 transition-all duration-300 mb-8"
         >
-          <h2 className="text-2xl font-semibold mb-8 flex items-center justify-center">
-            <FaCog className="mr-3 text-purple-400" /> Processing Roadmap
+          <h2 className="text-2xl font-semibold mb-8 flex items-center justify-center text-gray-100">
+            <FaCog className="mr-3 text-blue-400" /> Processing Roadmap
           </h2>
 
           <div className="flex flex-col space-y-8">
@@ -554,19 +557,19 @@ function Home() {
                         ? "bg-green-500/20 border-2 border-green-400"
                         : agentStatus[key] === "running"
                           ? "bg-blue-500/20 border-2 border-blue-400"
-                          : "bg-gray-500/20 border-2 border-gray-400"
+                          : "bg-slate-600/20 border-2 border-slate-600"
                     }`}
                   >
                     {getStatusIcon(key === "ingestion" ? agentStatus.ingestion.status : agentStatus[key])}
                   </div>
                   {index < Object.keys(roadmapData).length - 1 && (
-                    <div className="w-0.5 h-16 bg-gradient-to-b from-white/30 to-transparent mt-4"></div>
+                    <div className="w-0.5 h-16 bg-gradient-to-b from-gray-400/30 to-transparent mt-4"></div>
                   )}
                 </div>
 
                 {/* Stage Content */}
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-white mb-4">{stage.title}</h3>
+                  <h3 className="text-xl font-semibold text-gray-100 mb-4">{stage.title}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {stage.tasks.map((task, taskIndex) => {
                       let taskStatus = "pending"
@@ -585,16 +588,16 @@ function Home() {
                       return (
                         <div
                           key={taskIndex}
-                          className={`p-3 rounded-lg backdrop-blur-sm border transition-all duration-300 ${
+                          className={`p-3 rounded-lg border transition-all duration-300 ${
                             taskStatus === "completed"
                               ? "bg-green-500/10 border-green-400/30"
                               : taskStatus === "running"
                                 ? "bg-blue-500/10 border-blue-400/30"
-                                : "bg-white/5 border-white/10"
+                                : "bg-slate-800/50 border-slate-600"
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-white/80">{task}</span>
+                            <span className="text-sm text-gray-300">{task}</span>
                             <div className="w-4 h-4">{getStatusIcon(taskStatus)}</div>
                           </div>
                         </div>
@@ -608,13 +611,13 @@ function Home() {
 
           {/* Progress Bar */}
           <div className="mt-8">
-            <div className="flex justify-between text-sm text-white/60 mb-2">
+            <div className="flex justify-between text-sm text-gray-400 mb-2">
               <span>Overall Progress</span>
               <span>{progress}%</span>
             </div>
-            <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 shadow-lg"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 h-3 rounded-full transition-all duration-500 shadow-lg"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -626,12 +629,12 @@ function Home() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="backdrop-blur-md bg-white/10 p-8 rounded-2xl shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 mb-8"
+            className="bg-slate-900/80 backdrop-blur-lg p-8 rounded-xl shadow-xl border border-slate-700 hover:bg-slate-900/90 transition-all duration-300 mb-8"
           >
-            <h2 className="text-2xl font-semibold mb-4 flex items-center">
-              <FaCheckCircle className="mr-3 text-green-400" /> Status
+            <h2 className="text-2xl font-semibold mb-4 flex items-center text-gray-100">
+              <FaCheckCircle className="mr-3 text-blue-400" /> Status
             </h2>
-            <p className="text-white/80 text-lg">{uploadStatus}</p>
+            <p className="text-gray-300 text-lg">{uploadStatus}</p>
           </motion.div>
         )}
 
@@ -639,12 +642,12 @@ function Home() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="backdrop-blur-md bg-white/10 p-8 rounded-2xl shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 mb-8"
+            className="bg-slate-900/80 backdrop-blur-lg p-8 rounded-xl shadow-xl border border-slate-700 hover:bg-slate-900/90 transition-all duration-300 mb-8"
           >
-            <h2 className="text-2xl font-semibold mb-4 flex items-center">
+            <h2 className="text-2xl font-semibold mb-4 flex items-center text-gray-100">
               <FaDatabase className="mr-3 text-blue-400" /> AI Analysis
             </h2>
-            <pre className="whitespace-pre-wrap text-white/70 overflow-auto max-h-60 bg-black/20 p-4 rounded-lg font-mono text-sm">
+            <pre className="whitespace-pre-wrap text-gray-300 overflow-auto max-h-60 bg-slate-800/50 p-4 rounded-lg border border-slate-600 font-mono text-sm">
               {aiAnalysis}
             </pre>
           </motion.div>
@@ -655,16 +658,16 @@ function Home() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="backdrop-blur-md bg-white/10 p-8 rounded-2xl shadow-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 mb-8"
+            className="bg-slate-900/80 backdrop-blur-lg p-8 rounded-xl shadow-xl border border-slate-700 hover:bg-slate-900/90 transition-all duration-300 mb-8"
           >
-            <h2 className="text-2xl font-semibold mb-6 flex items-center">
-              <FaCog className="mr-3 text-purple-400" /> Actions
+            <h2 className="text-2xl font-semibold mb-6 flex items-center text-gray-100">
+              <FaCog className="mr-3 text-blue-400" /> Actions
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {reportPath && agentStatus.report === "completed" && (
                 <button
                   onClick={() => downloadReport("markdown")}
-                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-xl hover:from-green-600 hover:to-emerald-700 flex items-center justify-center transition-all duration-300 shadow-lg"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-gray-100 p-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   <FaFileCsv className="mr-2" /> Download Markdown Report
                 </button>
@@ -672,7 +675,7 @@ function Home() {
               {reportPath && agentStatus.report === "completed" && (
                 <button
                   onClick={() => downloadReport("pdf")}
-                  className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-4 rounded-xl hover:from-red-600 hover:to-pink-700 flex items-center justify-center transition-all duration-300 shadow-lg"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-gray-100 p-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   <FaFilePdf className="mr-2" /> Download PDF Report
                 </button>
@@ -680,7 +683,7 @@ function Home() {
               {uploadStatus && (
                 <button
                   onClick={goToChat}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-xl hover:from-blue-600 hover:to-purple-700 flex items-center justify-center transition-all duration-300 shadow-lg"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-gray-100 p-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   <FaComments className="mr-2" /> Go to Chat
                 </button>
@@ -694,14 +697,14 @@ function Home() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="backdrop-blur-md bg-red-500/10 p-8 rounded-2xl shadow-2xl border border-red-400/30 hover:bg-red-500/15 transition-all duration-300"
+            className="bg-red-500/10 backdrop-blur-lg p-8 rounded-xl shadow-xl border border-red-400/30 hover:bg-red-500/15 transition-all duration-300 mb-8"
           >
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-2xl font-semibold mb-4 flex items-center text-red-400">
                   <FaSpinner className="mr-3" /> Error
                 </h2>
-                <p className="text-white/80">{error}</p>
+                <p className="text-gray-300">{error}</p>
               </div>
               <button onClick={() => setError("")} className="text-red-400 hover:text-red-300 text-2xl">
                 ×
@@ -719,18 +722,18 @@ function Home() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "tween", duration: 0.3 }}
-            className="fixed top-0 right-0 h-full w-96 backdrop-blur-md bg-white/10 border-l border-white/20 shadow-2xl p-6 overflow-y-auto z-50 text-white"
+            className="fixed top-0 right-0 h-full w-96 bg-slate-900/80 backdrop-blur-lg border-l border-slate-700 shadow-xl p-6 overflow-y-auto z-50 text-gray-200"
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Ingestion Logs</h2>
+              <h2 className="text-2xl font-bold text-gray-100">Ingestion Logs</h2>
               <button
                 onClick={toggleSidebar}
-                className="text-white/60 hover:text-red-400 transition-all duration-300 text-2xl"
+                className="text-gray-400 hover:text-red-400 transition-all duration-300 text-2xl"
               >
                 ×
               </button>
             </div>
-            <div className="text-sm text-white/80 whitespace-pre-wrap bg-black/20 p-4 rounded-lg font-mono">
+            <div className="text-sm text-gray-300 whitespace-pre-wrap bg-slate-800/50 p-4 rounded-lg border border-slate-600 font-mono">
               {logContent}
             </div>
           </motion.div>
@@ -738,8 +741,8 @@ function Home() {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer className="backdrop-blur-md bg-white/10 border-t border-white/20 text-white p-6 text-center z-10 relative">
-        <p className="text-white/70">© 2025 DataEng-Automata. Transforming data into intelligence.</p>
+      <footer className="bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 text-gray-400 p-6 text-center z-10 relative shrink-0">
+        <p>© 2025 DataEng-Automata. Transforming data into intelligence.</p>
       </footer>
     </div>
   )
