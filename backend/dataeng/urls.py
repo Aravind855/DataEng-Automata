@@ -12,4 +12,5 @@ urlpatterns = [
     path('delete_schema/', delete_schema, name='delete_schema'),
     path('get_schema/', get_schema, name='get_schema'),
     path('get_logs/', get_logs, name='get_logs'),
+    path('download_pdf/', download_pdf, name='download_pdf'),
 ]

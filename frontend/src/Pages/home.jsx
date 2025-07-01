@@ -258,6 +258,7 @@ function Home() {
       }
       if (report_path) {
         finalProgress = 100
+        setReportPath(report_path) // Ensure reportPath is set
       }
       setProgress(finalProgress)
 
@@ -660,23 +661,21 @@ function Home() {
               <FaCog className="mr-3 text-purple-400" /> Actions
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {reportPath && (
-                <>
-                  <button
-                    onClick={() => downloadReport("markdown")}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-xl hover:from-green-600 hover:to-emerald-700 flex items-center justify-center transition-all duration-300 disabled:from-gray-600 disabled:to-gray-700 shadow-lg"
-                    disabled={agentStatus.report !== "completed"}
-                  >
-                    <FaFileCsv className="mr-2" /> Download Markdown
-                  </button>
-                  <button
-                    onClick={() => downloadReport("pdf")}
-                    className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-4 rounded-xl hover:from-red-600 hover:to-pink-700 flex items-center justify-center transition-all duration-300 disabled:from-gray-600 disabled:to-gray-700 shadow-lg"
-                    disabled={agentStatus.report !== "completed"}
-                  >
-                    <FaFilePdf className="mr-2" /> Download PDF
-                  </button>
-                </>
+              {reportPath && agentStatus.report === "completed" && (
+                <button
+                  onClick={() => downloadReport("markdown")}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-xl hover:from-green-600 hover:to-emerald-700 flex items-center justify-center transition-all duration-300 shadow-lg"
+                >
+                  <FaFileCsv className="mr-2" /> Download Markdown Report
+                </button>
+              )}
+              {reportPath && agentStatus.report === "completed" && (
+                <button
+                  onClick={() => downloadReport("pdf")}
+                  className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-4 rounded-xl hover:from-red-600 hover:to-pink-700 flex items-center justify-center transition-all duration-300 shadow-lg"
+                >
+                  <FaFilePdf className="mr-2" /> Download PDF Report
+                </button>
               )}
               {uploadStatus && (
                 <button

@@ -24,7 +24,7 @@
 | employee_id    | 20          | 20           | 0          |
 | name           | 20          | 20           | 0          |
 | salary         | 20          | 14           | 0          |
-| designation    | 20          | 4            | 0          |
+| designation    | 20          | 5            | 0          |
 | joining_date   | 20          | 20           | 0          |
 | year_joined    | 20          | 5            | 0          |
 
